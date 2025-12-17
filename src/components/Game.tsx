@@ -148,9 +148,9 @@ export default function Game({ onBack }: GameProps) {
                         <button
                             type="submit"
                             disabled={status === 'won' || input.length !== 4}
-                            className="absolute right-2 top-2 bottom-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-3 rounded-xl opacity-0 group-focus-within:opacity-100 transition-all duration-300 hover:scale-110 hover:rotate-6 active:scale-95 disabled:opacity-0 shadow-lg shadow-purple-500/30"
+                            className="absolute right-2 top-2 bottom-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-3 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:grayscale shadow-lg shadow-purple-500/30 flex items-center justify-center"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                         </button>
                     </form>
 

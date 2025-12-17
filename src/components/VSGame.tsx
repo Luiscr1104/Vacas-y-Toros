@@ -242,20 +242,29 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
                     )}
 
                     <div className="space-y-4">
-                        <input
-                            type="text"
-                            maxLength={4}
-                            value={mySecret}
-                            onChange={(e) => {
-                                setMySecret(e.target.value);
-                                setError('');
-                            }}
-                            placeholder="4 dígitos únicos"
-                            disabled={setupReady || !connectionReady}
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            className="w-full bg-black/20 text-white text-center text-3xl tracking-[1em] font-mono py-4 rounded-2xl border-2 border-white/10 focus:border-purple-400 outline-none transition-all disabled:opacity-50 placeholder:text-white/20 placeholder:tracking-normal placeholder:text-lg"
-                        />
+                        <div className="relative group">
+                            <input
+                                type="text"
+                                maxLength={4}
+                                value={mySecret}
+                                onChange={(e) => {
+                                    setMySecret(e.target.value);
+                                    setError('');
+                                }}
+                                placeholder="4 dígitos únicos"
+                                disabled={setupReady || !connectionReady}
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                className="w-full bg-black/20 text-white text-center text-3xl tracking-[1em] font-mono py-4 rounded-2xl border-2 border-white/10 focus:border-purple-400 outline-none transition-all disabled:opacity-50 placeholder:text-white/20 placeholder:tracking-normal placeholder:text-lg"
+                            />
+                            <button
+                                onClick={handleSetSecret}
+                                disabled={setupReady || !connectionReady || mySecret.length !== 4}
+                                className="absolute right-2 top-2 bottom-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-0 shadow-lg shadow-purple-500/30 flex items-center justify-center"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+                            </button>
+                        </div>
 
                         {error && (
                             <p className="text-red-400 text-sm text-center">{error}</p>
@@ -316,7 +325,7 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
                     </h3>
 
                     {gameState === 'playing' && (
-                        <form onSubmit={handleGuess} className="mb-4">
+                        <form onSubmit={handleGuess} className="mb-4 relative group">
                             <input
                                 ref={inputRef}
                                 type="text"
@@ -329,7 +338,14 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
                                 pattern="[0-9]*"
                                 className="w-full bg-black/20 text-white text-center text-2xl tracking-widest font-mono py-3 rounded-xl border-2 border-white/10 focus:border-purple-400 outline-none transition-all disabled:opacity-50 placeholder:text-white/20 placeholder:tracking-normal placeholder:text-lg"
                             />
-                            {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+                            <button
+                                type="submit"
+                                disabled={!isMyTurn || input.length !== 4}
+                                className={`absolute right-1.5 top-1.5 bottom-1.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-3 rounded-lg transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center shadow-lg shadow-purple-500/30 ${(!isMyTurn || input.length !== 4) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+                            </button>
+                            {error && <p className="text-red-400 text-xs mt-1 absolute -bottom-5 left-0 right-0 text-center">{error}</p>}
                         </form>
                     )}
 
