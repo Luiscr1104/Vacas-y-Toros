@@ -43,7 +43,7 @@ export default function App() {
     }
 
     if (gameMode === 'solo') {
-        return <Game />;
+        return <Game onBack={exitToMainMenu} />;
     }
 
     // VS Mode

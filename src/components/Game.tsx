@@ -8,7 +8,11 @@ type Guess = {
 
 type GameStatus = 'playing' | 'won';
 
-export default function Game() {
+interface GameProps {
+    onBack?: () => void;
+}
+
+export default function Game({ onBack }: GameProps) {
     const [secret, setSecret] = useState<string>('');
     const [guesses, setGuesses] = useState<Guess[]>([]);
     const [input, setInput] = useState<string>('');
@@ -98,6 +102,15 @@ export default function Game() {
             {/* Main Game Card */}
             <div className={`flex-1 w-full max-w-md relative bg-white/10 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/20 overflow-hidden transition-all duration-500 transform ${status === 'won' ? 'scale-105 border-green-400/50 shadow-green-500/20' : ''}`}>
 
+                {onBack && (
+                    <button
+                        onClick={onBack}
+                        className="absolute top-4 left-4 text-white/30 hover:text-white transition-colors z-10"
+                    >
+                        ← Menu
+                    </button>
+                )}
+
                 {/* Header */}
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-black bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent mb-2">
@@ -145,12 +158,22 @@ export default function Game() {
                             <div className="text-6xl mb-2">🏆</div>
                             <h2 className="text-2xl font-bold text-green-300">You Cracked It!</h2>
                             <p className="text-white/60">Number: {secret}</p>
-                            <button
-                                onClick={startNewGame}
-                                className="mt-4 px-6 py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 rounded-full text-sm font-bold transition-all duration-300 border border-green-400/30 hover:border-green-400/50 hover:scale-105 active:scale-95 shadow-lg shadow-green-500/10"
-                            >
-                                🎮 Play Again
-                            </button>
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    onClick={startNewGame}
+                                    className="px-6 py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 rounded-full text-sm font-bold transition-all duration-300 border border-green-400/30 hover:border-green-400/50 hover:scale-105 active:scale-95 shadow-lg shadow-green-500/10"
+                                >
+                                    🎮 Jugar de Nuevo
+                                </button>
+                                {onBack && (
+                                    <button
+                                        onClick={onBack}
+                                        className="px-6 py-2 text-white/40 hover:text-white transition-colors text-xs font-bold"
+                                    >
+                                        Salir al Menú
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     )}
 
