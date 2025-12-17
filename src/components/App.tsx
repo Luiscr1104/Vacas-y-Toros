@@ -15,6 +15,21 @@ export default function App() {
     const [connection, setConnection] = useState<any | null>(null);
     const [isHost, setIsHost] = useState<boolean>(false);
 
+    const exitToMainMenu = () => {
+        // Reset state
+        setGameMode(null);
+        setVSState('lobby');
+        setPeer(null);
+        if (connection) {
+            connection.close();
+            setConnection(null);
+        }
+        // Clear URL parameters without reloading
+        const url = new URL(window.location.href);
+        url.searchParams.delete('room');
+        window.history.pushState({}, '', url.pathname);
+    };
+
     // Auto-join room if ID is in URL
     React.useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -41,13 +56,20 @@ export default function App() {
                     setIsHost(host);
                     setVSState('game');
                 }}
-                onBack={() => setGameMode(null)}
+                onBack={exitToMainMenu}
             />
         );
     }
 
     if (peer && connection) {
-        return <VSGame peer={peer} connection={connection} isHost={isHost} />;
+        return (
+            <VSGame
+                peer={peer}
+                connection={connection}
+                isHost={isHost}
+                onExit={exitToMainMenu}
+            />
+        );
     }
 
     return null;

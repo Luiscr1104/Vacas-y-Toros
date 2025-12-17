@@ -13,9 +13,10 @@ interface VSGameProps {
     peer: Peer;
     connection: any;
     isHost: boolean;
+    onExit: () => void;
 }
 
-export default function VSGame({ peer, connection, isHost }: VSGameProps) {
+export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps) {
     const [mySecret, setMySecret] = useState<string>('');
     const mySecretRef = useRef<string>(''); // Ref to hold the latest value
     const [opponentSecret, setOpponentSecret] = useState<string>('');
@@ -291,7 +292,20 @@ export default function VSGame({ peer, connection, isHost }: VSGameProps) {
     }
 
     return (
-        <div className="w-full max-w-4xl mx-auto p-4">
+        <div className="w-full max-w-4xl mx-auto p-4 relative">
+            {/* Header / Back to Menu */}
+            <div className="flex justify-between items-center mb-6">
+                <button
+                    onClick={onExit}
+                    className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm font-bold bg-white/5 px-4 py-2 rounded-full hover:bg-white/10"
+                >
+                    🏠 Menú Principal
+                </button>
+                <div className="text-white/20 text-xs font-mono uppercase tracking-widest">
+                    Modo VS Online
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* My Side */}
                 <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
@@ -380,12 +394,20 @@ export default function VSGame({ peer, connection, isHost }: VSGameProps) {
                         <p className="text-white/60 mb-6">
                             El número era: <span className="text-2xl font-bold text-white tracking-widest ml-2">{opponentSecret || '...'}</span>
                         </p>
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-full transition-all"
-                        >
-                            Jugar de Nuevo
-                        </button>
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-full transition-all shadow-lg shadow-purple-500/30"
+                            >
+                                Jugar de Nuevo
+                            </button>
+                            <button
+                                onClick={onExit}
+                                className="px-8 py-2 text-white/60 hover:text-white transition-colors text-sm font-bold"
+                            >
+                                Salir al Menú Principal
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
