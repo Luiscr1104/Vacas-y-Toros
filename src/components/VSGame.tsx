@@ -50,11 +50,7 @@ export default function VSGame({ peer, connection, isHost }: VSGameProps) {
         connection.on('data', handleData);
 
         // Force connection ready after a short delay
-        // This handles the case where connection was already open before we added the listener
         const timer = setTimeout(() => {
-            console.log('Timeout: Checking connection state');
-            console.log('Connection.open after timeout:', connection.open);
-            // Just set it to ready regardless - the connection should be established by now
             setConnectionReady(true);
         }, 500);
 
@@ -92,10 +88,7 @@ export default function VSGame({ peer, connection, isHost }: VSGameProps) {
                 }
                 break;
             case 'guess':
-                console.log('Received guess:', data.number);
-                console.log('My secret is:', mySecretRef.current);
                 const result = calculateBullsCows(data.number, mySecretRef.current);
-                console.log('Calculated result:', result);
                 setOpponentGuesses(prev => [{
                     number: data.number,
                     bulls: result.bulls,
@@ -140,7 +133,6 @@ export default function VSGame({ peer, connection, isHost }: VSGameProps) {
                 }
                 break;
             case 'reveal_secret':
-                console.log('Received opponent secret:', data.secret);
                 setOpponentSecret(data.secret);
                 break;
         }
