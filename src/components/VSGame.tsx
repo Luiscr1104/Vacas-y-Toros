@@ -28,7 +28,15 @@ export default function VSGame({ peer, connection, isHost }: VSGameProps) {
     const [setupReady, setSetupReady] = useState<boolean>(false);
     const [opponentReady, setOpponentReady] = useState<boolean>(false);
     const [connectionReady, setConnectionReady] = useState<boolean>(false);
+    const [scratchpad, setScratchpad] = useState<Record<string, boolean>>({});
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const toggleScratch = (digit: string) => {
+        setScratchpad(prev => ({
+            ...prev,
+            [digit]: !prev[digit]
+        }));
+    };
 
     useEffect(() => {
         console.log('Setting up connection listener');
@@ -243,7 +251,7 @@ export default function VSGame({ peer, connection, isHost }: VSGameProps) {
                             }}
                             placeholder="4 dígitos únicos"
                             disabled={setupReady || !connectionReady}
-                            className="w-full bg-black/20 text-white text-center text-3xl tracking-[1em] font-mono py-4 rounded-2xl border-2 border-white/10 focus:border-purple-400 outline-none transition-all disabled:opacity-50"
+                            className="w-full bg-black/20 text-white text-center text-3xl tracking-[1em] font-mono py-4 rounded-2xl border-2 border-white/10 focus:border-purple-400 outline-none transition-all disabled:opacity-50 placeholder:text-white/20 placeholder:tracking-normal placeholder:text-lg"
                         />
 
                         {error && (
@@ -301,7 +309,7 @@ export default function VSGame({ peer, connection, isHost }: VSGameProps) {
                                 onChange={(e) => setInput(e.target.value)}
                                 disabled={!isMyTurn}
                                 placeholder={isMyTurn ? "Tu intento..." : "Espera tu turno"}
-                                className="w-full bg-black/20 text-white text-center text-2xl tracking-widest font-mono py-3 rounded-xl border-2 border-white/10 focus:border-purple-400 outline-none transition-all disabled:opacity-50"
+                                className="w-full bg-black/20 text-white text-center text-2xl tracking-widest font-mono py-3 rounded-xl border-2 border-white/10 focus:border-purple-400 outline-none transition-all disabled:opacity-50 placeholder:text-white/20 placeholder:tracking-normal placeholder:text-lg"
                             />
                             {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
                         </form>
@@ -339,6 +347,27 @@ export default function VSGame({ peer, connection, isHost }: VSGameProps) {
                     </div>
                 </div>
             </div>
+            {/* Scratchpad (Number Tracker) */}
+            {gameState === 'playing' && (
+                <div className="mt-8 bg-white/5 backdrop-blur-sm rounded-3xl p-4 border border-white/10 flex flex-row gap-3 items-center justify-center flex-wrap shadow-inner shadow-black/20">
+                    {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
+                        <button
+                            key={digit}
+                            onClick={() => toggleScratch(digit)}
+                            className={`w-10 h-10 md:w-12 md:h-12 rounded-full font-mono font-bold text-lg md:text-xl transition-all duration-300 border relative overflow-hidden group hover:shadow-lg hover:shadow-purple-500/20 active:scale-90 ${scratchpad[digit]
+                                ? 'bg-red-500/10 text-white/20 border-red-500/20 scale-95 grayscale'
+                                : 'bg-gradient-to-br from-white/10 to-white/5 text-white border-white/10 hover:border-purple-400/50 hover:scale-110 hover:-translate-y-1'
+                                }`}
+                        >
+                            {digit}
+                            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${scratchpad[digit] ? 'opacity-100' : 'opacity-0'}`}>
+                                <div className="w-[120%] h-1 bg-red-500/60 rotate-45 transform origin-center shadow-sm"></div>
+                                <div className="absolute w-[120%] h-1 bg-red-500/60 -rotate-45 transform origin-center shadow-sm"></div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Game Over */}
             {(gameState === 'won' || gameState === 'lost') && (
