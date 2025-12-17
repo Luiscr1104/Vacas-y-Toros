@@ -15,6 +15,14 @@ export default function App() {
     const [connection, setConnection] = useState<any | null>(null);
     const [isHost, setIsHost] = useState<boolean>(false);
 
+    // Auto-join room if ID is in URL
+    React.useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('room')) {
+            setGameMode('vs');
+        }
+    }, []);
+
     if (!gameMode) {
         return <MainMenu onStartGame={(mode) => setGameMode(mode)} />;
     }
