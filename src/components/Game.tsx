@@ -136,6 +136,8 @@ export default function Game({ onBack }: GameProps) {
                             }}
                             placeholder="Type 4 unique digits..."
                             disabled={status === 'won'}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             className="w-full bg-black/20 text-white text-center text-3xl tracking-[1em] font-mono py-4 rounded-2xl border-2 border-white/10 focus:border-purple-400 focus:shadow-lg focus:shadow-purple-500/20 outline-none transition-all duration-300 placeholder:text-white/10 placeholder:tracking-normal placeholder:text-lg hover:border-white/20"
                         />
                         {error && (
@@ -233,25 +235,30 @@ export default function Game({ onBack }: GameProps) {
             </div>
 
             {/* Scratchpad Side Panel */}
-            <div className="w-full md:w-24 bg-white/5 backdrop-blur-sm rounded-3xl p-4 border border-white/10 flex flex-row md:flex-col gap-3 items-center justify-center flex-wrap shrink-0 shadow-inner shadow-black/20">
-                {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
-                    <button
-                        key={digit}
-                        onClick={() => toggleScratch(digit)}
-                        className={`w-12 h-12 rounded-full font-mono font-bold text-xl transition-all duration-300 border relative overflow-hidden group hover:shadow-lg hover:shadow-purple-500/20 active:scale-90 ${scratchpad[digit]
-                            ? 'bg-red-500/10 text-white/20 border-red-500/20 scale-95 grayscale'
-                            : 'bg-gradient-to-br from-white/10 to-white/5 text-white border-white/10 hover:border-purple-400/50 hover:scale-110 hover:-translate-y-1'
-                            }`}
-                    >
-                        {digit}
-                        <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${scratchpad[digit] ? 'opacity-100' : 'opacity-0'}`}>
-                            <div className="w-[120%] h-1 bg-red-500/60 rotate-45 transform origin-center shadow-sm"></div>
-                            <div className="absolute w-[120%] h-1 bg-red-500/60 -rotate-45 transform origin-center shadow-sm"></div>
-                        </div>
-                    </button>
-                ))}
-            </div>
+            <div className="flex flex-col gap-3">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-bold text-center md:rotate-90 md:mb-8 whitespace-nowrap">
+                    Descartar números
+                </span>
+                <div className="w-full md:w-24 bg-white/5 backdrop-blur-sm rounded-3xl p-4 border border-white/10 flex flex-row md:flex-col gap-3 items-center justify-center flex-wrap shrink-0 shadow-inner shadow-black/20">
+                    {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
+                        <button
+                            key={digit}
+                            onClick={() => toggleScratch(digit)}
+                            className={`w-12 h-12 rounded-full font-mono font-bold text-xl transition-all duration-300 border relative overflow-hidden group hover:shadow-lg hover:shadow-purple-500/20 active:scale-90 ${scratchpad[digit]
+                                ? 'bg-red-500/10 text-white/20 border-red-500/20 scale-95 grayscale'
+                                : 'bg-gradient-to-br from-white/10 to-white/5 text-white border-white/10 hover:border-purple-400/50 hover:scale-110 hover:-translate-y-1'
+                                }`}
+                        >
+                            {digit}
+                            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${scratchpad[digit] ? 'opacity-100' : 'opacity-0'}`}>
+                                <div className="w-[120%] h-1 bg-red-500/60 rotate-45 transform origin-center shadow-sm"></div>
+                                <div className="absolute w-[120%] h-1 bg-red-500/60 -rotate-45 transform origin-center shadow-sm"></div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
 
+            </div>
         </div>
     );
 }
