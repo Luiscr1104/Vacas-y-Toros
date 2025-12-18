@@ -43,7 +43,7 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
     useEffect(() => {
         const timer = setInterval(() => {
             setExampleIndex((prev) => (prev + 1) % EXAMPLES.length);
-        }, 6000); // Slower interval for better understanding
+        }, 10000); // Increased to 10s for better readability
         return () => clearInterval(timer);
     }, []);
 
