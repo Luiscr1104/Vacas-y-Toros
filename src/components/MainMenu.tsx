@@ -6,8 +6,8 @@ interface MainMenuProps {
 
 export default function MainMenu({ onStartGame }: MainMenuProps) {
     return (
-        <div className="w-full max-w-2xl mx-auto p-8 perspective-1000">
-            <div className="relative bg-white/10 backdrop-blur-md rounded-3xl p-12 shadow-2xl border border-white/20 overflow-hidden">
+        <div className="w-full max-w-2xl mx-auto p-4 sm:p-8 perspective-1000">
+            <div className="relative bg-white/10 backdrop-blur-md rounded-3xl p-6 sm:p-12 shadow-2xl border border-white/20 overflow-hidden">
 
                 {/* Animated background elements */}
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
@@ -19,34 +19,34 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
                 <div className="relative z-10 text-center space-y-8">
                     {/* Title */}
                     <div className="space-y-4">
-                        <h1 className="text-6xl md:text-7xl font-black bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent mb-4 animate-in fade-in zoom-in-50 duration-700">
+                        <h1 className="text-5xl sm:text-7xl font-black bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent mb-2 sm:mb-4 animate-in fade-in zoom-in-50 duration-700 leading-tight">
                             VACAS Y TOROS
                         </h1>
-                        <p className="text-xl text-blue-200 font-medium tracking-wide animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '0.2s' }}>
-                            ¿Puedes adivinar el número secreto?
+                        <p className="text-lg sm:text-xl text-blue-200 font-medium tracking-wide animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '0.2s' }}>
+                            ¿Puedes adivinar el número?
                         </p>
                     </div>
 
                     {/* Game Rules - More Visual */}
-                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '0.4s' }}>
-                        <h2 className="text-xl font-bold text-white/90">¿Cómo jugar?</h2>
+                    <div className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '0.4s' }}>
+                        <h2 className="text-lg sm:text-xl font-bold text-white/90">¿Cómo jugar?</h2>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {/* Toro Card */}
-                            <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-5 border border-white/10 flex flex-col items-center gap-3 transition-transform hover:scale-105 group">
-                                <div className="text-4xl group-hover:animate-bounce">🐂</div>
+                            <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border border-white/10 flex flex-row sm:flex-col items-center gap-4 sm:gap-3 transition-transform hover:scale-105 group text-left sm:text-center">
+                                <div className="text-4xl group-hover:animate-bounce shrink-0">🐂</div>
                                 <div>
-                                    <h4 className="font-black text-green-400 uppercase tracking-widest text-sm mb-1">Toro</h4>
-                                    <p className="text-xs text-white/60 leading-tight">Dígito correcto en la posición <strong>correcta</strong>.</p>
+                                    <h4 className="font-black text-green-400 uppercase tracking-widest text-xs sm:text-sm mb-1">Toro</h4>
+                                    <p className="text-[11px] sm:text-xs text-white/60 leading-tight">Dígito correcto en posición <strong>correcta</strong>.</p>
                                 </div>
                             </div>
 
                             {/* Vaca Card */}
-                            <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-5 border border-white/10 flex flex-col items-center gap-3 transition-transform hover:scale-105 group">
-                                <div className="text-4xl group-hover:animate-bounce">🐄</div>
+                            <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border border-white/10 flex flex-row sm:flex-col items-center gap-4 sm:gap-3 transition-transform hover:scale-105 group text-left sm:text-center">
+                                <div className="text-4xl group-hover:animate-bounce shrink-0">🐄</div>
                                 <div>
-                                    <h4 className="font-black text-yellow-400 uppercase tracking-widest text-sm mb-1">Vaca</h4>
-                                    <p className="text-xs text-white/60 leading-tight">Dígito correcto en la posición <strong>incorrecta</strong>.</p>
+                                    <h4 className="font-black text-yellow-400 uppercase tracking-widest text-xs sm:text-sm mb-1">Vaca</h4>
+                                    <p className="text-[11px] sm:text-xs text-white/60 leading-tight">Dígito correcto en posición <strong>incorrecta</strong>.</p>
                                 </div>
                             </div>
                         </div>
@@ -83,22 +83,22 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
                         {/* Solo Mode */}
                         <button
                             onClick={() => onStartGame('solo')}
-                            className="group relative p-6 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 hover:from-purple-500/30 hover:to-indigo-500/30 border-2 border-purple-400/30 hover:border-purple-400/60 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/30 active:scale-95"
+                            className="group relative p-4 sm:p-6 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 hover:from-purple-500/30 hover:to-indigo-500/30 border-2 border-purple-400/30 hover:border-purple-400/60 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/30 active:scale-95"
                         >
-                            <div className="text-5xl mb-3">🎮</div>
-                            <h3 className="text-xl font-bold text-white mb-2">Solo</h3>
-                            <p className="text-sm text-white/60">Juega contra la computadora</p>
+                            <div className="text-4xl sm:text-5xl mb-2 sm:mb-3 text-center">🎮</div>
+                            <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2 text-center">Solo</h3>
+                            <p className="text-xs sm:text-sm text-white/60 text-center">Juega contra la computadora</p>
                             <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-2xl opacity-0 group-hover:opacity-10 blur-xl transition-opacity duration-300"></div>
                         </button>
 
                         {/* VS Mode */}
                         <button
                             onClick={() => onStartGame('vs')}
-                            className="group relative p-6 bg-gradient-to-br from-pink-500/20 to-rose-500/20 hover:from-pink-500/30 hover:to-rose-500/30 border-2 border-pink-400/30 hover:border-pink-400/60 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-pink-500/30 active:scale-95"
+                            className="group relative p-4 sm:p-6 bg-gradient-to-br from-pink-500/20 to-rose-500/20 hover:from-pink-500/30 hover:to-rose-500/30 border-2 border-pink-400/30 hover:border-pink-400/60 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-pink-500/30 active:scale-95"
                         >
-                            <div className="text-5xl mb-3">⚔️</div>
-                            <h3 className="text-xl font-bold text-white mb-2">VS</h3>
-                            <p className="text-sm text-white/60">Juega contra otro jugador</p>
+                            <div className="text-4xl sm:text-5xl mb-2 sm:mb-3 text-center">⚔️</div>
+                            <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2 text-center">Modo VS</h3>
+                            <p className="text-xs sm:text-sm text-white/60 text-center">Juega contra otro jugador</p>
                             <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-rose-500 rounded-2xl opacity-0 group-hover:opacity-10 blur-xl transition-opacity duration-300"></div>
                         </button>
                     </div>
