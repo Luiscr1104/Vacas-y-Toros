@@ -142,9 +142,9 @@ export default function Game({ onBack }: GameProps) {
                 {onBack && (
                     <button
                         onClick={onBack}
-                        className="absolute top-4 left-4 text-white/30 hover:text-white transition-colors z-10"
+                        className="absolute top-6 left-6 text-white/50 hover:text-white transition-all z-10 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10 text-xs font-bold flex items-center gap-2"
                     >
-                        ← Menú
+                        <span>←</span> Menú
                     </button>
                 )}
 
@@ -175,7 +175,7 @@ export default function Game({ onBack }: GameProps) {
                             disabled={status === 'won'}
                             inputMode="numeric"
                             pattern="[0-9]*"
-                            className="w-full bg-black/20 text-white text-center text-3xl tracking-[1em] font-mono py-4 rounded-2xl border-2 border-white/10 focus:border-purple-400 focus:shadow-lg focus:shadow-purple-500/20 outline-none transition-all duration-300 placeholder:text-white/10 placeholder:tracking-normal placeholder:text-lg hover:border-white/20"
+                            className={`w-full bg-black/20 text-white text-center text-3xl font-mono py-4 rounded-2xl border-2 border-white/10 focus:border-purple-400 focus:shadow-lg focus:shadow-purple-500/20 outline-none transition-all duration-300 placeholder:text-white/10 placeholder:tracking-normal placeholder:text-lg hover:border-white/20 ${input ? 'tracking-[0.8em] pl-[0.8em]' : 'tracking-normal'}`}
                         />
                         {error && (
                             <div className="absolute -bottom-6 left-0 right-0 text-center text-red-400 text-sm font-bold animate-bounce">

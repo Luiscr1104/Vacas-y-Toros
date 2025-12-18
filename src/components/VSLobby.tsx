@@ -178,9 +178,9 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
                 {/* Back Button */}
                 <button
                     onClick={onBack}
-                    className="absolute top-4 left-4 text-white/60 hover:text-white transition-colors"
+                    className="absolute top-6 left-6 text-white/50 hover:text-white transition-all z-10 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10 text-xs font-bold flex items-center gap-2"
                 >
-                    ← Volver
+                    <span>←</span> Volver
                 </button>
 
                 <div className="text-center space-y-6">
