@@ -1,0 +1,19 @@
+---
+import App from "../components/App";
+import "../styles/global.css";
+---
+
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Vacas y Toros</title>
+	</head>
+	<body
+		class="bg-slate-900 text-white min-h-screen flex items-center justify-center"
+	>
+		<App client:load />
+	</body>
+</html>
