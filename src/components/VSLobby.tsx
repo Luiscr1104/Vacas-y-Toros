@@ -77,7 +77,18 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
 
         newPeer.on('error', (err) => {
             console.error('PeerJS error:', err);
-            setStatus(`Error: ${err.type}`);
+            // Handle fatal errors or just display status
+            if (err.type === 'peer-unavailable') {
+                setStatus('Error: La sala ya no existe o el host se desconectó.');
+            } else {
+                setStatus(`Error: ${err.type}`);
+            }
+        });
+
+        newPeer.on('disconnected', () => {
+            console.log('Peer disconnected, attempting to reconnect...');
+            setStatus('Conexión perdida. Intentando reconectar...');
+            newPeer.reconnect();
         });
 
         // DON'T destroy peer on unmount - we need it to stay alive for VSGame
@@ -122,10 +133,40 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
     };
 
     const shareLink = () => {
-        const link = `${window.location.origin}${window.location.pathname}?room=${peerId}`;
+        const link = shareUrl;
         navigator.clipboard.writeText(link);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleNativeShare = async () => {
+        const shareData = {
+            title: 'Vacas y Toros - ¡Juega Conmigo!',
+            text: 'Únete a mi partida de Vacas y Toros.',
+            url: shareUrl,
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                if ((err as Error).name !== 'AbortError') {
+                    console.error('Error sharing:', err);
+                    shareLink();
+                }
+            }
+        } else {
+            shareLink();
+        }
+    };
+
+    const handleReconnect = () => {
+        if (peer && peer.disconnected) {
+            setStatus('Reconectando manualmente...');
+            peer.reconnect();
+        } else {
+            window.location.reload();
+        }
     };
 
     const shareUrl = `${window.location.origin}${window.location.pathname}?room=${peerId}`;
@@ -150,6 +191,14 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
                     {/* Status */}
                     <div className="bg-black/20 rounded-2xl p-6 border border-white/10">
                         <p className="text-lg text-white/80">{status}</p>
+                        {status.includes('Error') && (
+                            <button
+                                onClick={handleReconnect}
+                                className="mt-4 text-xs text-purple-400 hover:text-purple-300 underline"
+                            >
+                                Reintentar / Recargar
+                            </button>
+                        )}
                     </div>
 
                     {/* Host: Show share link */}
@@ -162,12 +211,21 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
                                 </div>
                             </div>
 
-                            <button
-                                onClick={shareLink}
-                                className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-full transition-all duration-300 hover:scale-105 active:scale-95"
-                            >
-                                {copied ? '✓ Copiado!' : '📋 Copiar Enlace'}
-                            </button>
+                            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                <button
+                                    onClick={handleNativeShare}
+                                    className="flex-1 px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    <span>📤 Enviar por WhatsApp / Otros</span>
+                                </button>
+
+                                <button
+                                    onClick={shareLink}
+                                    className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white/80 rounded-full border border-white/10 transition-all text-sm"
+                                >
+                                    {copied ? '✓ Copiado' : '📋 Copiar'}
+                                </button>
+                            </div>
 
                             <p className="text-sm text-white/40">
                                 Esperando a que tu amigo se conecte...

@@ -59,6 +59,14 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
 
         connection.on('data', handleData);
 
+        // Handle peer disconnection from signaling server
+        const handleDisconnect = () => {
+            console.log('Peer disconnected from server, attempting reconnect...');
+            peer.reconnect();
+        };
+
+        peer.on('disconnected', handleDisconnect);
+
         // Force connection ready after a short delay
         const timer = setTimeout(() => {
             setConnectionReady(true);
@@ -68,8 +76,9 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
             clearTimeout(timer);
             connection.off('open', handleOpen);
             connection.off('data', handleData);
+            peer.off('disconnected', handleDisconnect);
         };
-    }, [connection]);
+    }, [connection, peer]);
 
     // Auto-focus input when game starts
     useEffect(() => {
