@@ -76,15 +76,15 @@ export default function Game({ onBack }: GameProps) {
         if (status === 'won') return;
 
         if (input.length !== 4) {
-            setError('Must be 4 digits');
+            setError('Debe tener 4 dígitos');
             return;
         }
         if (!/^\d+$/.test(input)) {
-            setError('Numbers only');
+            setError('Solo números');
             return;
         }
         if (new Set(input).size !== 4) {
-            setError('Digits must be unique');
+            setError('Los dígitos deben ser únicos');
             return;
         }
 
@@ -144,7 +144,7 @@ export default function Game({ onBack }: GameProps) {
                         onClick={onBack}
                         className="absolute top-4 left-4 text-white/30 hover:text-white transition-colors z-10"
                     >
-                        ← Menu
+                        ← Menú
                     </button>
                 )}
 
@@ -154,7 +154,7 @@ export default function Game({ onBack }: GameProps) {
                         VACAS Y TOROS
                     </h1>
                     <p className="text-blue-200 text-sm font-medium tracking-wide uppercase opacity-80">
-                        Guess the 4-digit number
+                        Adivina el número de 4 dígitos
                     </p>
                 </div>
 
@@ -171,7 +171,7 @@ export default function Game({ onBack }: GameProps) {
                                 if (e.target.value.length <= 4) setInput(e.target.value);
                                 setError('');
                             }}
-                            placeholder="Type 4 unique digits..."
+                            placeholder="Escribe 4 dígitos únicos..."
                             disabled={status === 'won'}
                             inputMode="numeric"
                             pattern="[0-9]*"
@@ -297,8 +297,8 @@ export default function Game({ onBack }: GameProps) {
 
                 {/* Footer Rules */}
                 <div className="mt-8 text-center text-white/30 text-xs">
-                    <p>🐂 Toro: Right digit, right place</p>
-                    <p>🐄 Vaca: Right digit, wrong place</p>
+                    <p>🐂 Toro: Dígito correcto, posición correcta</p>
+                    <p>🐄 Vaca: Dígito correcto, posición incorrecta</p>
                 </div>
             </div>
 

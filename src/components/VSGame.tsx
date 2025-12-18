@@ -338,7 +338,7 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
                     </button>
                 </div>
                 <div className="text-white/20 text-xs font-mono uppercase tracking-widest">
-                    Modo VS Online
+                    Modo VS en Línea
                 </div>
             </div>
 

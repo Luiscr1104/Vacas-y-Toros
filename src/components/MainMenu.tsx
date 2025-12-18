@@ -167,7 +167,7 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
                     <div className="mt-12 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000" style={{ animationDelay: '0.8s' }}>
                         <div className="flex items-center justify-between px-2">
                             <h2 className="text-xl font-black text-white/90 flex items-center gap-2">
-                                <span className="text-2xl">🏆</span> Hall of Fame
+                                <span className="text-2xl">🏆</span> Salón de la Fama
                             </h2>
                             <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Top 10 Global</span>
                         </div>
