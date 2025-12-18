@@ -27,22 +27,54 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
                         </p>
                     </div>
 
-                    {/* Game Rules */}
-                    <div className="bg-black/20 rounded-2xl p-6 border border-white/10 space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '0.4s' }}>
-                        <h2 className="text-lg font-bold text-white/90 mb-3">Cómo Jugar</h2>
-                        <div className="space-y-2 text-sm text-white/70">
-                            <p className="flex items-center justify-center gap-2">
-                                <span className="text-2xl">🎯</span>
-                                <span>Adivina el número de 4 dígitos únicos</span>
+                    {/* Game Rules - More Visual */}
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '0.4s' }}>
+                        <h2 className="text-xl font-bold text-white/90">¿Cómo jugar?</h2>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* Toro Card */}
+                            <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-5 border border-white/10 flex flex-col items-center gap-3 transition-transform hover:scale-105 group">
+                                <div className="text-4xl group-hover:animate-bounce">🐂</div>
+                                <div>
+                                    <h4 className="font-black text-green-400 uppercase tracking-widest text-sm mb-1">Toro</h4>
+                                    <p className="text-xs text-white/60 leading-tight">Dígito correcto en la posición <strong>correcta</strong>.</p>
+                                </div>
+                            </div>
+
+                            {/* Vaca Card */}
+                            <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-5 border border-white/10 flex flex-col items-center gap-3 transition-transform hover:scale-105 group">
+                                <div className="text-4xl group-hover:animate-bounce">🐄</div>
+                                <div>
+                                    <h4 className="font-black text-yellow-400 uppercase tracking-widest text-sm mb-1">Vaca</h4>
+                                    <p className="text-xs text-white/60 leading-tight">Dígito correcto en la posición <strong>incorrecta</strong>.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Example Box */}
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-left">
+                            <p className="text-xs text-blue-200/60 uppercase tracking-widest font-bold mb-3 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
+                                Ejemplo Rápido
                             </p>
-                            <p className="flex items-center justify-center gap-2">
-                                <span className="text-2xl">🐂</span>
-                                <span><strong className="text-green-300">Toro</strong>: Dígito correcto en posición correcta</span>
-                            </p>
-                            <p className="flex items-center justify-center gap-2">
-                                <span className="text-2xl">🐄</span>
-                                <span><strong className="text-yellow-300">Vaca</strong>: Dígito correcto en posición incorrecta</span>
-                            </p>
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between items-center text-sm font-mono tracking-wider">
+                                    <span className="text-white/40">Secreto:</span>
+                                    <span className="text-white">1 2 3 4</span>
+                                </div>
+                                <div className="flex justify-between items-center text-sm font-mono tracking-wider">
+                                    <span className="text-white/40">Tu intento:</span>
+                                    <span className="text-white">1 4 7 8</span>
+                                </div>
+                                <div className="h-px bg-white/10 my-1"></div>
+                                <div className="flex justify-between items-center font-bold">
+                                    <span className="text-xs text-white/40">Resultado:</span>
+                                    <div className="flex gap-4">
+                                        <span className="text-green-300">1 🐂</span>
+                                        <span className="text-yellow-300">1 🐄</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
