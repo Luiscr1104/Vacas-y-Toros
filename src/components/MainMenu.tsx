@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { audio } from '../lib/audio';
 
 type Score = {
     name: string;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Peer from 'peerjs';
+import { audio } from '../lib/audio';
 
 interface VSLobbyProps {
     onGameStart: (peer: Peer, connection: any, isHost: boolean) => void;
@@ -44,6 +45,7 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
             console.log('Host: Received connection from guest');
             setConnection(conn);
             setStatus('¡Amigo conectado! Preparando juego...');
+            audio.play('bull');
 
             conn.on('open', () => {
                 console.log('Host: Connection is now open');
@@ -105,6 +107,7 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
             console.log('Guest: Connection is now open');
             setConnection(conn);
             setStatus('¡Conectado! Verificando...');
+            audio.play('bull');
 
             // Wait longer to ensure connection is stable
             setTimeout(() => {
@@ -136,6 +139,7 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
         const link = shareUrl;
         navigator.clipboard.writeText(link);
         setCopied(true);
+        audio.play('click');
         setTimeout(() => setCopied(false), 2000);
     };
 
@@ -162,6 +166,7 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
 
     const handleReconnect = () => {
         if (peer && peer.disconnected) {
+            audio.play('click');
             setStatus('Reconectando manualmente...');
             peer.reconnect();
         } else {
@@ -176,7 +181,10 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
             {onBack && (
                 <div className="w-full max-w-2xl flex justify-start">
                     <button
-                        onClick={onBack}
+                        onClick={() => {
+                            audio.play('click');
+                            onBack();
+                        }}
                         className="text-white/50 hover:text-white transition-all bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10 text-xs font-bold flex items-center gap-2 shadow-lg"
                     >
                         <span>←</span> Volver

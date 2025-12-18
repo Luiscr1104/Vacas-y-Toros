@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Peer from 'peerjs';
+import { audio } from '../lib/audio';
 
 type Guess = {
     number: string;
@@ -34,6 +35,7 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
     const inputRef = useRef<HTMLInputElement>(null);
 
     const toggleScratch = (digit: string) => {
+        audio.play('click');
         setScratchpad(prev => ({
             ...prev,
             [digit]: !prev[digit]
@@ -91,6 +93,7 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
     useEffect(() => {
         if (setupReady && opponentReady && gameState === 'setup') {
             console.log('Both players ready, transitioning to playing');
+            audio.play('start');
             setTimeout(() => setGameState('playing'), 500);
         }
     }, [setupReady, opponentReady, gameState]);
@@ -123,6 +126,7 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
 
                 // Check if opponent won
                 if (result.bulls === 4) {
+                    audio.play('lost');
                     setGameState('lost');
                     // Reveal my secret to the opponent (the winner)
                     connection.send({
@@ -141,6 +145,7 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
                 });
 
                 if (data.bulls === 4) {
+                    audio.play('win');
                     setGameState('won');
                     // Reveal my secret to the opponent (the loser)
                     connection.send({
@@ -148,6 +153,11 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
                         secret: mySecretRef.current
                     });
                 } else {
+                    if (data.bulls > 0) {
+                        audio.play('bull');
+                    } else if (data.cows > 0) {
+                        audio.play('cow');
+                    }
                     setIsMyTurn(false);
                 }
                 break;
@@ -198,6 +208,7 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
         console.log('mySecretRef.current set to:', mySecretRef.current);
 
         setSetupReady(true);
+        audio.play('click');
         setError('');
 
         try {
@@ -324,7 +335,10 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
             <div className="flex justify-between items-center mb-10">
                 <div className="flex gap-3">
                     <button
-                        onClick={onExit}
+                        onClick={() => {
+                            audio.play('click');
+                            onExit();
+                        }}
                         className="flex items-center gap-2 text-white/60 hover:text-white transition-all text-sm font-bold bg-white/5 px-5 py-2.5 rounded-full border border-white/10 hover:bg-white/10 shadow-lg"
                     >
                         <span>🏠</span> Menú Principal

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { audio } from '../lib/audio';
 
 type Guess = {
     number: string;
@@ -43,6 +44,7 @@ export default function Game({ onBack }: GameProps) {
     };
 
     const startNewGame = () => {
+        audio.play('start');
         setSecret(generateSecret());
         setGuesses([]);
         setStatus('playing');
@@ -76,14 +78,17 @@ export default function Game({ onBack }: GameProps) {
         if (status === 'won') return;
 
         if (input.length !== 4) {
+            audio.play('error');
             setError('Debe tener 4 dígitos');
             return;
         }
         if (!/^\d+$/.test(input)) {
+            audio.play('error');
             setError('Solo números');
             return;
         }
         if (new Set(input).size !== 4) {
+            audio.play('error');
             setError('Los dígitos deben ser únicos');
             return;
         }
@@ -95,9 +100,14 @@ export default function Game({ onBack }: GameProps) {
         setInput('');
 
         if (bulls === 4) {
+            audio.play('win');
             setStatus('won');
             const duration = Math.floor((Date.now() - startTime) / 1000);
             setGameTime(duration);
+        } else if (bulls > 0) {
+            audio.play('bull');
+        } else if (cows > 0) {
+            audio.play('cow');
         }
     };
 
@@ -128,6 +138,7 @@ export default function Game({ onBack }: GameProps) {
     };
 
     const toggleScratch = (digit: string) => {
+        audio.play('click');
         setScratchpad(prev => ({
             ...prev,
             [digit]: !prev[digit]
@@ -139,7 +150,10 @@ export default function Game({ onBack }: GameProps) {
             {onBack && (
                 <div className="w-full max-w-md md:max-w-2xl flex justify-start">
                     <button
-                        onClick={onBack}
+                        onClick={() => {
+                            audio.play('click');
+                            onBack();
+                        }}
                         className="text-white/50 hover:text-white transition-all bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10 text-xs font-bold flex items-center gap-2 shadow-lg"
                     >
                         <span>←</span> Menú
