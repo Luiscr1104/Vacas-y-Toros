@@ -303,8 +303,8 @@ export default function Game({ onBack }: GameProps) {
             </div>
 
             {/* Scratchpad Side Panel */}
-            <div className="flex flex-col gap-3">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-bold text-center md:rotate-90 md:mb-8 whitespace-nowrap">
+            <div className="flex flex-col gap-4">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-bold text-center">
                     Descartar números
                 </span>
                 <div className="w-full md:w-48 bg-white/5 backdrop-blur-sm rounded-3xl p-4 sm:p-6 border border-white/10 flex flex-row md:grid md:grid-cols-2 gap-3 items-center justify-center flex-wrap shrink-0 shadow-inner shadow-black/20">
