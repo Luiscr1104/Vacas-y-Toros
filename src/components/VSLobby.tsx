@@ -174,7 +174,7 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
     return (
         <div className="w-full max-w-2xl mx-auto p-8 flex flex-col gap-6 items-center">
             {onBack && (
-                <div className="w-full max-w-md flex justify-start">
+                <div className="w-full max-w-2xl flex justify-start">
                     <button
                         onClick={onBack}
                         className="text-white/50 hover:text-white transition-all bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10 text-xs font-bold flex items-center gap-2 shadow-lg"
