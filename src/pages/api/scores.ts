@@ -18,8 +18,8 @@ export const GET: APIRoute = async () => {
                 'Content-Type': 'application/json'
             }
         });
-    } catch (e) {
-        return new Response(JSON.stringify({ error: 'Failed to fetch scores' }), {
+    } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message || 'Failed to fetch scores' }), {
             status: 500
         });
     }
@@ -49,8 +49,8 @@ export const POST: APIRoute = async ({ request }) => {
         return new Response(JSON.stringify({ success: true, id: result.insertedId }), {
             status: 201
         });
-    } catch (e) {
-        return new Response(JSON.stringify({ error: 'Failed to save score' }), {
+    } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message || 'Failed to save score' }), {
             status: 500
         });
     }
