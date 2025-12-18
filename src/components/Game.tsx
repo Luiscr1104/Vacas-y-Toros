@@ -19,6 +19,11 @@ export default function Game({ onBack }: GameProps) {
     const [status, setStatus] = useState<GameStatus>('playing');
     const [error, setError] = useState<string>('');
     const [scratchpad, setScratchpad] = useState<Record<string, boolean>>({});
+    const [startTime, setStartTime] = useState<number>(0);
+    const [gameTime, setGameTime] = useState<number>(0);
+    const [playerName, setPlayerName] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [submitted, setSubmitted] = useState<boolean>(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Initialize game
@@ -44,6 +49,10 @@ export default function Game({ onBack }: GameProps) {
         setInput('');
         setError('');
         setScratchpad({});
+        setStartTime(Date.now());
+        setGameTime(0);
+        setSubmitted(false);
+        setPlayerName('');
         setTimeout(() => inputRef.current?.focus(), 100);
     };
 
@@ -87,6 +96,34 @@ export default function Game({ onBack }: GameProps) {
 
         if (bulls === 4) {
             setStatus('won');
+            const duration = Math.floor((Date.now() - startTime) / 1000);
+            setGameTime(duration);
+        }
+    };
+
+    const submitScore = async () => {
+        if (!playerName.trim() || isSubmitting) return;
+
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/scores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: playerName.trim(),
+                    attempts: guesses.length + 1, // Current guess counts too
+                    time: gameTime,
+                    mode: 'solo'
+                })
+            });
+
+            if (response.ok) {
+                setSubmitted(true);
+            }
+        } catch (e) {
+            console.error('Error submitting score:', e);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -156,10 +193,41 @@ export default function Game({ onBack }: GameProps) {
 
                     {/* Victory Message */}
                     {status === 'won' && (
-                        <div className="text-center py-6 animate-pulse">
-                            <div className="text-6xl mb-2">🏆</div>
-                            <h2 className="text-2xl font-bold text-green-300">You Cracked It!</h2>
-                            <p className="text-white/60">Number: {secret}</p>
+                        <div className="text-center py-6 animate-in zoom-in-50 duration-500">
+                            <div className="text-6xl mb-2 animate-bounce">🏆</div>
+                            <h2 className="text-2xl font-bold text-green-300">¡Lo lograste!</h2>
+                            <p className="text-white/60 mb-4">Número: <span className="text-white font-mono font-bold tracking-widest">{secret}</span></p>
+
+                            {!submitted ? (
+                                <div className="bg-black/30 rounded-2xl p-4 mb-6 border border-white/10 space-y-4">
+                                    <p className="text-xs uppercase tracking-[0.2em] text-purple-300 font-bold">Hall of Fame</p>
+                                    <div className="flex flex-col gap-2">
+                                        <input
+                                            type="text"
+                                            value={playerName}
+                                            onChange={(e) => setPlayerName(e.target.value)}
+                                            placeholder="Tu nombre..."
+                                            maxLength={15}
+                                            className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-center outline-none focus:border-purple-400 transition-all text-sm"
+                                        />
+                                        <button
+                                            onClick={submitScore}
+                                            disabled={!playerName.trim() || isSubmitting}
+                                            className="w-full py-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-purple-500/20 disabled:opacity-50"
+                                        >
+                                            {isSubmitting ? 'Guardando...' : 'Guardar Récord'}
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] text-white/40 italic">
+                                        {guesses.length} intentos en {gameTime} segundos
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 mb-6 animate-in slide-in-from-bottom-2">
+                                    <p className="text-green-300 text-sm font-bold">✨ ¡Guardado en el Hall of Fame!</p>
+                                </div>
+                            )}
+
                             <div className="flex flex-col gap-2">
                                 <button
                                     onClick={startNewGame}

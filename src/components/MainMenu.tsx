@@ -1,10 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
+type Score = {
+    name: string;
+    attempts: number;
+    time: number;
+    mode: string;
+    date: string;
+};
 
 interface MainMenuProps {
     onStartGame: (mode: 'solo' | 'vs') => void;
 }
 
 export default function MainMenu({ onStartGame }: MainMenuProps) {
+    const [scores, setScores] = useState<Score[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    useEffect(() => {
+        const fetchScores = async () => {
+            try {
+                const response = await fetch('/api/scores');
+                if (response.ok) {
+                    const data = await response.json();
+                    setScores(data);
+                }
+            } catch (e) {
+                console.error('Error fetching scores:', e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchScores();
+    }, []);
+
     return (
         <div className="w-full max-w-2xl mx-auto p-4 sm:p-8 perspective-1000">
             <div className="relative bg-white/10 backdrop-blur-md rounded-3xl p-6 sm:p-12 shadow-2xl border border-white/20 overflow-hidden">
@@ -101,6 +129,43 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
                             <p className="text-xs sm:text-sm text-white/60 text-center">Juega contra otro jugador</p>
                             <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-rose-500 rounded-2xl opacity-0 group-hover:opacity-10 blur-xl transition-opacity duration-300"></div>
                         </button>
+                    </div>
+
+                    {/* Hall of Fame / Leaderboard */}
+                    <div className="mt-12 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000" style={{ animationDelay: '0.8s' }}>
+                        <div className="flex items-center justify-between px-2">
+                            <h2 className="text-xl font-black text-white/90 flex items-center gap-2">
+                                <span className="text-2xl">🏆</span> Hall of Fame
+                            </h2>
+                            <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Top 10 Global</span>
+                        </div>
+
+                        <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden shadow-inner shadow-black/40">
+                            {loading ? (
+                                <div className="p-8 flex justify-center">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+                                </div>
+                            ) : scores.length === 0 ? (
+                                <p className="p-8 text-white/40 italic text-sm">Sé el primero en aparecer aquí...</p>
+                            ) : (
+                                <div className="divide-y divide-white/5">
+                                    {scores.map((score, index) => (
+                                        <div key={index} className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
+                                            <div className="flex items-center gap-4">
+                                                <span className={`w-6 text-sm font-black ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-600' : 'text-white/20'}`}>
+                                                    #{index + 1}
+                                                </span>
+                                                <span className="text-white font-bold text-sm tracking-wide">{score.name}</span>
+                                            </div>
+                                            <div className="flex gap-4 text-xs font-mono">
+                                                <span className="text-purple-300">{score.attempts} <span className="text-[10px] opacity-60">pasos</span></span>
+                                                <span className="text-blue-300">{score.time}s</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
