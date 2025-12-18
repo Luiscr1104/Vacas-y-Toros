@@ -12,9 +12,16 @@ interface MainMenuProps {
     onStartGame: (mode: 'solo' | 'vs') => void;
 }
 
+const EXAMPLES = [
+    { secret: '1234', guess: '1478', bulls: 1, cows: 1 },
+    { secret: '5678', guess: '5612', bulls: 2, cows: 0 },
+    { secret: '9012', guess: '2109', bulls: 0, cows: 4 },
+];
+
 export default function MainMenu({ onStartGame }: MainMenuProps) {
     const [scores, setScores] = useState<Score[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [exampleIndex, setExampleIndex] = useState(0);
 
     useEffect(() => {
         const fetchScores = async () => {
@@ -32,6 +39,15 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
         };
         fetchScores();
     }, []);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setExampleIndex((prev) => (prev + 1) % EXAMPLES.length);
+        }, 3000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const currentExample = EXAMPLES[exampleIndex];
 
     return (
         <div className="w-full max-w-2xl mx-auto p-4 sm:p-8 perspective-1000">
@@ -80,26 +96,42 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
                         </div>
 
                         {/* Example Box */}
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-left">
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-left overflow-hidden relative min-h-[140px]">
                             <p className="text-xs text-blue-200/60 uppercase tracking-widest font-bold mb-3 flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
                                 Ejemplo Rápido
                             </p>
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between items-center text-sm font-mono tracking-wider">
-                                    <span className="text-white/40">Secreto:</span>
-                                    <span className="text-white">1 2 3 4</span>
-                                </div>
-                                <div className="flex justify-between items-center text-sm font-mono tracking-wider">
-                                    <span className="text-white/40">Tu intento:</span>
-                                    <span className="text-white">1 4 7 8</span>
-                                </div>
-                                <div className="h-px bg-white/10 my-1"></div>
-                                <div className="flex justify-between items-center font-bold">
-                                    <span className="text-xs text-white/40">Resultado:</span>
-                                    <div className="flex gap-4">
-                                        <span className="text-green-300">1 🐂</span>
-                                        <span className="text-yellow-300">1 🐄</span>
+                            <div key={exampleIndex} className="animate-in fade-in slide-in-from-right-4 duration-500">
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex justify-between items-center text-sm font-mono tracking-wider">
+                                        <span className="text-white/40">Secreto:</span>
+                                        <div className="flex gap-2">
+                                            {currentExample.secret.split('').map((d, i) => (
+                                                <span key={i} className="text-white w-4 text-center">{d}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm font-mono tracking-wider">
+                                        <span className="text-white/40">Tu intento:</span>
+                                        <div className="flex gap-2">
+                                            {currentExample.guess.split('').map((d, i) => (
+                                                <span key={i} className={`w-4 text-center font-bold ${currentExample.secret[i] === d ? 'text-green-400' : currentExample.secret.includes(d) ? 'text-yellow-400' : 'text-white'}`}>
+                                                    {d}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="h-px bg-white/10 my-1"></div>
+                                    <div className="flex justify-between items-center font-bold">
+                                        <span className="text-xs text-white/40">Resultado:</span>
+                                        <div className="flex gap-4">
+                                            <span className={`transition-all duration-300 ${currentExample.bulls > 0 ? 'text-green-300 scale-110' : 'text-white/20'}`}>
+                                                {currentExample.bulls} 🐂
+                                            </span>
+                                            <span className={`transition-all duration-300 ${currentExample.cows > 0 ? 'text-yellow-300 scale-110' : 'text-white/20'}`}>
+                                                {currentExample.cows} 🐄
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

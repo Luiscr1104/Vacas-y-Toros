@@ -412,14 +412,14 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
                     <span className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-bold">
                         Descartar números
                     </span>
-                    <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-4 border border-white/10 flex flex-row gap-3 items-center justify-center flex-wrap shadow-inner shadow-black/20">
+                    <div className="w-full max-w-lg md:max-w-md bg-white/5 backdrop-blur-sm rounded-3xl p-4 sm:p-6 border border-white/10 flex flex-row md:grid md:grid-cols-5 gap-3 items-center justify-center flex-wrap shadow-inner shadow-black/20">
                         {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
                             <button
                                 key={digit}
                                 onClick={() => toggleScratch(digit)}
-                                className={`w-10 h-10 md:w-12 md:h-12 rounded-full font-mono font-bold text-lg md:text-xl transition-all duration-300 border relative overflow-hidden group hover:shadow-lg hover:shadow-purple-500/20 active:scale-90 ${scratchpad[digit]
+                                className={`w-11 h-11 sm:w-14 sm:h-14 md:w-auto md:h-14 rounded-2xl font-mono font-bold text-xl transition-all duration-300 border relative overflow-hidden group hover:shadow-lg hover:shadow-purple-500/20 active:scale-90 ${scratchpad[digit]
                                     ? 'bg-red-500/10 text-white/20 border-red-500/20 scale-95 grayscale'
-                                    : 'bg-gradient-to-br from-white/10 to-white/5 text-white border-white/10 hover:border-purple-400/50 hover:scale-110 hover:-translate-y-1'
+                                    : 'bg-gradient-to-br from-white/10 to-white/5 text-white border-white/10 hover:border-purple-400/50 hover:scale-110'
                                     }`}
                             >
                                 {digit}
