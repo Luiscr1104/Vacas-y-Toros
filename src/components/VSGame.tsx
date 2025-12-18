@@ -30,6 +30,7 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
     const [opponentReady, setOpponentReady] = useState<boolean>(false);
     const [connectionReady, setConnectionReady] = useState<boolean>(false);
     const [scratchpad, setScratchpad] = useState<Record<string, boolean>>({});
+    const [showHelp, setShowHelp] = useState<boolean>(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const toggleScratch = (digit: string) => {
@@ -228,7 +229,13 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
     if (gameState === 'setup') {
         return (
             <div className="w-full max-w-md mx-auto p-8">
-                <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/20">
+                <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/20 relative">
+                    <button
+                        onClick={() => setShowHelp(true)}
+                        className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-white/40 hover:text-white transition-all text-sm font-bold bg-white/5 rounded-full border border-white/10"
+                    >
+                        ?
+                    </button>
                     <h2 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
                         Elige tu Número Secreto
                     </h2>
@@ -306,12 +313,21 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
         <div className="w-full max-w-4xl mx-auto p-4 relative">
             {/* Header / Back to Menu */}
             <div className="flex justify-between items-center mb-6">
-                <button
-                    onClick={onExit}
-                    className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm font-bold bg-white/5 px-4 py-2 rounded-full hover:bg-white/10"
-                >
-                    🏠 Menú Principal
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={onExit}
+                        className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm font-bold bg-white/5 px-4 py-2 rounded-full hover:bg-white/10"
+                    >
+                        🏠 Menú Principal
+                    </button>
+                    <button
+                        onClick={() => setShowHelp(true)}
+                        className="w-9 h-9 flex items-center justify-center text-white/60 hover:text-white transition-all text-lg font-bold bg-white/5 rounded-full hover:bg-white/10 border border-white/10"
+                        title="Cómo jugar"
+                    >
+                        ?
+                    </button>
+                </div>
                 <div className="text-white/20 text-xs font-mono uppercase tracking-widest">
                     Modo VS Online
                 </div>
@@ -433,6 +449,61 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
                                 Salir al Menú Principal
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {/* Instructions Modal */}
+            {showHelp && (
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white/10 border border-white/20 rounded-3xl p-8 max-w-lg w-full shadow-2xl relative animate-in zoom-in-95 duration-200">
+                        <button
+                            onClick={() => setShowHelp(false)}
+                            className="absolute top-4 right-4 text-white/40 hover:text-white text-2xl font-bold p-2"
+                        >
+                            ×
+                        </button>
+
+                        <h2 className="text-3xl font-black mb-6 bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                            ¿Cómo jugar?
+                        </h2>
+
+                        <div className="space-y-6 text-white/80">
+                            <section>
+                                <p className="leading-relaxed text-sm">
+                                    Adivina el número secreto de 4 dígitos únicos de tu oponente antes que él adivine el tuyo.
+                                </p>
+                            </section>
+
+                            <section className="grid grid-cols-1 gap-4">
+                                <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className="text-2xl">🐂</span>
+                                        <h4 className="font-bold text-green-400 uppercase tracking-wider text-xs">Toros</h4>
+                                    </div>
+                                    <p className="text-xs">Número correcto en la posición <strong>correcta</strong>.</p>
+                                </div>
+
+                                <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className="text-2xl">🐄</span>
+                                        <h4 className="font-bold text-yellow-400 uppercase tracking-wider text-xs">Vacas</h4>
+                                    </div>
+                                    <p className="text-xs">Número correcto en la posición <strong>incorrecta</strong>.</p>
+                                </div>
+                            </section>
+
+                            <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-400/20 text-xs italic">
+                                Ejemplo: Secreto 1234, Adivinas 1478: <br />
+                                <strong>1 Toro</strong> (el 1) y <strong>1 Vaca</strong> (el 4).
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setShowHelp(false)}
+                            className="w-full mt-8 py-3 bg-white text-black font-bold rounded-2xl hover:bg-blue-50 transition-colors shadow-lg"
+                        >
+                            ¡Entendido!
+                        </button>
                     </div>
                 </div>
             )}
