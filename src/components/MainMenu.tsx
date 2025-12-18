@@ -43,7 +43,7 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
     useEffect(() => {
         const timer = setInterval(() => {
             setExampleIndex((prev) => (prev + 1) % EXAMPLES.length);
-        }, 3000);
+        }, 6000); // Slower interval for better understanding
         return () => clearInterval(timer);
     }, []);
 
@@ -101,7 +101,7 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
                                 <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
                                 Ejemplo Rápido
                             </p>
-                            <div key={exampleIndex} className="animate-in fade-in slide-in-from-right-4 duration-500">
+                            <div key={exampleIndex} className="animate-in fade-in slide-in-from-right-8 duration-1000">
                                 <div className="flex flex-col gap-2">
                                     <div className="flex justify-between items-center text-sm font-mono tracking-wider">
                                         <span className="text-white/40">Secreto:</span>

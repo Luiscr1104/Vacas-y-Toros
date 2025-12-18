@@ -172,17 +172,19 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
     const shareUrl = `${window.location.origin}${window.location.pathname}?room=${peerId}`;
 
     return (
-        <div className="w-full max-w-2xl mx-auto p-8">
-            <div className="relative bg-white/10 backdrop-blur-md rounded-3xl p-12 shadow-2xl border border-white/20">
+        <div className="w-full max-w-2xl mx-auto p-8 flex flex-col gap-6 items-center">
+            {onBack && (
+                <div className="w-full max-w-md flex justify-start">
+                    <button
+                        onClick={onBack}
+                        className="text-white/50 hover:text-white transition-all bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10 text-xs font-bold flex items-center gap-2 shadow-lg"
+                    >
+                        <span>←</span> Volver
+                    </button>
+                </div>
+            )}
 
-                {/* Back Button */}
-                <button
-                    onClick={onBack}
-                    className="absolute top-6 left-6 text-white/50 hover:text-white transition-all z-10 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10 text-xs font-bold flex items-center gap-2"
-                >
-                    <span>←</span> Volver
-                </button>
-
+            <div className="relative bg-white/10 backdrop-blur-md rounded-3xl p-12 shadow-2xl border border-white/20 w-full">
                 <div className="text-center space-y-6">
                     <h2 className="text-4xl font-black bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
                         Modo VS

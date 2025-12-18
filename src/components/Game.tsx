@@ -135,197 +135,200 @@ export default function Game({ onBack }: GameProps) {
     };
 
     return (
-        <div className="w-full max-w-4xl mx-auto p-4 perspective-1000 flex flex-col md:flex-row gap-8 items-start justify-center">
-            {/* Main Game Card */}
-            <div className={`flex-1 w-full max-w-md relative bg-white/10 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/20 overflow-hidden transition-all duration-500 transform ${status === 'won' ? 'scale-105 border-green-400/50 shadow-green-500/20' : ''}`}>
-
-                {onBack && (
+        <div className="w-full max-w-4xl mx-auto p-4 perspective-1000 flex flex-col gap-6 items-center justify-center">
+            {onBack && (
+                <div className="w-full max-w-md flex justify-start">
                     <button
                         onClick={onBack}
-                        className="absolute top-6 left-6 text-white/50 hover:text-white transition-all z-10 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10 text-xs font-bold flex items-center gap-2"
+                        className="text-white/50 hover:text-white transition-all bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10 text-xs font-bold flex items-center gap-2 shadow-lg"
                     >
                         <span>←</span> Menú
                     </button>
-                )}
-
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-black bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent mb-2">
-                        VACAS Y TOROS
-                    </h1>
-                    <p className="text-blue-200 text-sm font-medium tracking-wide uppercase opacity-80">
-                        Adivina el número de 4 dígitos
-                    </p>
                 </div>
+            )}
 
-                {/* Game Area */}
-                <div className="space-y-6">
-                    {/* Input Form */}
-                    <form onSubmit={handleSubmit} className="relative group">
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            maxLength={4}
-                            value={input}
-                            onChange={(e) => {
-                                if (e.target.value.length <= 4) setInput(e.target.value);
-                                setError('');
-                            }}
-                            placeholder="Escribe 4 dígitos únicos..."
-                            disabled={status === 'won'}
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            className={`w-full bg-black/20 text-white text-center text-3xl font-mono py-4 rounded-2xl border-2 border-white/10 focus:border-purple-400 focus:shadow-lg focus:shadow-purple-500/20 outline-none transition-all duration-300 placeholder:text-white/10 placeholder:tracking-normal placeholder:text-lg hover:border-white/20 ${input ? 'tracking-[0.8em] pl-[0.8em]' : 'tracking-normal'}`}
-                        />
-                        {error && (
-                            <div className="absolute -bottom-6 left-0 right-0 text-center text-red-400 text-sm font-bold animate-bounce">
-                                {error}
-                            </div>
-                        )}
-                        <button
-                            type="submit"
-                            disabled={status === 'won' || input.length !== 4}
-                            className="absolute right-2 top-2 bottom-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-3 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:grayscale shadow-lg shadow-purple-500/30 flex items-center justify-center"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
-                        </button>
-                    </form>
+            <div className="flex flex-col md:flex-row gap-8 items-start justify-center w-full">
+                {/* Main Game Card */}
+                <div className={`flex-1 w-full max-w-md relative bg-white/10 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/20 overflow-hidden transition-all duration-500 transform ${status === 'won' ? 'scale-105 border-green-400/50 shadow-green-500/20' : ''}`}>
+                    {/* Header */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-4xl font-black bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent mb-2">
+                            VACAS Y TOROS
+                        </h1>
+                        <p className="text-blue-200 text-sm font-medium tracking-wide uppercase opacity-80">
+                            Adivina el número de 4 dígitos
+                        </p>
+                    </div>
 
-                    {/* Victory Message */}
-                    {status === 'won' && (
-                        <div className="text-center py-6 animate-in zoom-in-50 duration-500">
-                            <div className="text-6xl mb-2 animate-bounce">🏆</div>
-                            <h2 className="text-2xl font-bold text-green-300">¡Lo lograste!</h2>
-                            <p className="text-white/60 mb-4">Número: <span className="text-white font-mono font-bold tracking-widest">{secret}</span></p>
-
-                            {!submitted ? (
-                                <div className="bg-black/30 rounded-2xl p-4 mb-6 border border-white/10 space-y-4">
-                                    <p className="text-xs uppercase tracking-[0.2em] text-purple-300 font-bold">Hall of Fame</p>
-                                    <div className="flex flex-col gap-2">
-                                        <input
-                                            type="text"
-                                            value={playerName}
-                                            onChange={(e) => setPlayerName(e.target.value)}
-                                            placeholder="Tu nombre..."
-                                            maxLength={15}
-                                            className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-center outline-none focus:border-purple-400 transition-all text-sm"
-                                        />
-                                        <button
-                                            onClick={submitScore}
-                                            disabled={!playerName.trim() || isSubmitting}
-                                            className="w-full py-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-purple-500/20 disabled:opacity-50"
-                                        >
-                                            {isSubmitting ? 'Guardando...' : 'Guardar Récord'}
-                                        </button>
-                                    </div>
-                                    <p className="text-[10px] text-white/40 italic">
-                                        {guesses.length} intentos en {gameTime} segundos
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 mb-6 animate-in slide-in-from-bottom-2">
-                                    <p className="text-green-300 text-sm font-bold">✨ ¡Guardado en el Hall of Fame!</p>
+                    {/* Game Area */}
+                    <div className="space-y-6">
+                        {/* Input Form */}
+                        <form onSubmit={handleSubmit} className="relative group">
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                maxLength={4}
+                                value={input}
+                                onChange={(e) => {
+                                    if (e.target.value.length <= 4) setInput(e.target.value);
+                                    setError('');
+                                }}
+                                placeholder="Escribe 4 dígitos únicos..."
+                                disabled={status === 'won'}
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                className={`w-full bg-black/20 text-white text-center text-3xl font-mono py-4 rounded-2xl border-2 border-white/10 focus:border-purple-400 focus:shadow-lg focus:shadow-purple-500/20 outline-none transition-all duration-300 placeholder:text-white/10 placeholder:tracking-normal placeholder:text-lg hover:border-white/20 ${input ? 'tracking-[0.8em] pl-[0.8em]' : 'tracking-normal'}`}
+                            />
+                            {error && (
+                                <div className="absolute -bottom-6 left-0 right-0 text-center text-red-400 text-sm font-bold animate-bounce">
+                                    {error}
                                 </div>
                             )}
+                            <button
+                                type="submit"
+                                disabled={status === 'won' || input.length !== 4}
+                                className="absolute right-2 top-2 bottom-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-3 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:grayscale shadow-lg shadow-purple-500/30 flex items-center justify-center"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+                            </button>
+                        </form>
 
-                            <div className="flex flex-col gap-2">
-                                <button
-                                    onClick={startNewGame}
-                                    className="px-6 py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 rounded-full text-sm font-bold transition-all duration-300 border border-green-400/30 hover:border-green-400/50 hover:scale-105 active:scale-95 shadow-lg shadow-green-500/10"
-                                >
-                                    🎮 Jugar de Nuevo
-                                </button>
-                                {onBack && (
-                                    <button
-                                        onClick={onBack}
-                                        className="px-6 py-2 text-white/40 hover:text-white transition-colors text-xs font-bold"
-                                    >
-                                        Salir al Menú
-                                    </button>
+                        {/* Victory Message */}
+                        {status === 'won' && (
+                            <div className="text-center py-6 animate-in zoom-in-50 duration-500">
+                                <div className="text-6xl mb-2 animate-bounce">🏆</div>
+                                <h2 className="text-2xl font-bold text-green-300">¡Lo lograste!</h2>
+                                <p className="text-white/60 mb-4">Número: <span className="text-white font-mono font-bold tracking-widest">{secret}</span></p>
+
+                                {!submitted ? (
+                                    <div className="bg-black/30 rounded-2xl p-4 mb-6 border border-white/10 space-y-4">
+                                        <p className="text-xs uppercase tracking-[0.2em] text-purple-300 font-bold">Hall of Fame</p>
+                                        <div className="flex flex-col gap-2">
+                                            <input
+                                                type="text"
+                                                value={playerName}
+                                                onChange={(e) => setPlayerName(e.target.value)}
+                                                placeholder="Tu nombre..."
+                                                maxLength={15}
+                                                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-center outline-none focus:border-purple-400 transition-all text-sm"
+                                            />
+                                            <button
+                                                onClick={submitScore}
+                                                disabled={!playerName.trim() || isSubmitting}
+                                                className="w-full py-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-purple-500/20 disabled:opacity-50"
+                                            >
+                                                {isSubmitting ? 'Guardando...' : 'Guardar Récord'}
+                                            </button>
+                                        </div>
+                                        <p className="text-[10px] text-white/40 italic">
+                                            {guesses.length} intentos en {gameTime} segundos
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 mb-6 animate-in slide-in-from-bottom-2">
+                                        <p className="text-green-300 text-sm font-bold">✨ ¡Guardado en el Hall of Fame!</p>
+                                    </div>
                                 )}
-                            </div>
-                        </div>
-                    )}
 
-                    {/* History List */}
-                    <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                        {guesses.map((g, i) => (
-                            <div key={i} className="flex items-center justify-between bg-black/20 p-4 rounded-xl border border-white/5 hover:border-white/20 hover:bg-black/30 hover:scale-[1.02] transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 zoom-in-50 fill-mode-backwards cursor-default" style={{ animationDelay: `${i * 50}ms` }}>
-                                <span className="text-2xl font-mono tracking-widest text-white/90">{g.number}</span>
-                                <div className="flex gap-6">
-                                    {/* Bulls (Toros) */}
-                                    <div className={`flex flex-col items-center gap-1 transition-all duration-300 ${g.bulls > 0
-                                        ? 'scale-125'
-                                        : ''
-                                        }`}>
-                                        <div className={`relative ${g.bulls > 0 ? 'animate-pulse' : ''}`}>
-                                            <span className="text-3xl drop-shadow-lg">🐂</span>
-                                            {g.bulls > 0 && (
-                                                <div className="absolute inset-0 bg-green-500/30 blur-xl rounded-full"></div>
-                                            )}
-                                        </div>
-                                        <span className={`text-sm font-bold transition-all ${g.bulls > 0
-                                            ? 'text-green-300 scale-110'
-                                            : 'text-green-400/40'
-                                            }`}>
-                                            {g.bulls} Toros
-                                        </span>
-                                    </div>
-                                    {/* Cows (Vacas) */}
-                                    <div className={`flex flex-col items-center gap-1 transition-all duration-300 ${g.cows > 0
-                                        ? 'scale-125'
-                                        : ''
-                                        }`}>
-                                        <div className={`relative ${g.cows > 0 ? 'animate-pulse' : ''}`}>
-                                            <span className="text-3xl drop-shadow-lg">🐄</span>
-                                            {g.cows > 0 && (
-                                                <div className="absolute inset-0 bg-yellow-500/30 blur-xl rounded-full"></div>
-                                            )}
-                                        </div>
-                                        <span className={`text-sm font-bold transition-all ${g.cows > 0
-                                            ? 'text-yellow-300 scale-110'
-                                            : 'text-yellow-400/40'
-                                            }`}>
-                                            {g.cows} Vacas
-                                        </span>
-                                    </div>
+                                <div className="flex flex-col gap-2">
+                                    <button
+                                        onClick={startNewGame}
+                                        className="px-6 py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 rounded-full text-sm font-bold transition-all duration-300 border border-green-400/30 hover:border-green-400/50 hover:scale-105 active:scale-95 shadow-lg shadow-green-500/10"
+                                    >
+                                        🎮 Jugar de Nuevo
+                                    </button>
+                                    {onBack && (
+                                        <button
+                                            onClick={onBack}
+                                            className="px-6 py-2 text-white/40 hover:text-white transition-colors text-xs font-bold"
+                                        >
+                                            Salir al Menú
+                                        </button>
+                                    )}
                                 </div>
                             </div>
-                        ))}
+                        )}
+
+                        {/* History List */}
+                        <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                            {guesses.map((g, i) => (
+                                <div key={i} className="flex items-center justify-between bg-black/20 p-4 rounded-xl border border-white/5 hover:border-white/20 hover:bg-black/30 hover:scale-[1.02] transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 zoom-in-50 fill-mode-backwards cursor-default" style={{ animationDelay: `${i * 50}ms` }}>
+                                    <span className="text-2xl font-mono tracking-widest text-white/90">{g.number}</span>
+                                    <div className="flex gap-6">
+                                        {/* Bulls (Toros) */}
+                                        <div className={`flex flex-col items-center gap-1 transition-all duration-300 ${g.bulls > 0
+                                            ? 'scale-125'
+                                            : ''
+                                            }`}>
+                                            <div className={`relative ${g.bulls > 0 ? 'animate-pulse' : ''}`}>
+                                                <span className="text-3xl drop-shadow-lg">🐂</span>
+                                                {g.bulls > 0 && (
+                                                    <div className="absolute inset-0 bg-green-500/30 blur-xl rounded-full"></div>
+                                                )}
+                                            </div>
+                                            <span className={`text-sm font-bold transition-all ${g.bulls > 0
+                                                ? 'text-green-300 scale-110'
+                                                : 'text-green-400/40'
+                                                }`}>
+                                                {g.bulls} Toros
+                                            </span>
+                                        </div>
+                                        {/* Cows (Vacas) */}
+                                        <div className={`flex flex-col items-center gap-1 transition-all duration-300 ${g.cows > 0
+                                            ? 'scale-125'
+                                            : ''
+                                            }`}>
+                                            <div className={`relative ${g.cows > 0 ? 'animate-pulse' : ''}`}>
+                                                <span className="text-3xl drop-shadow-lg">🐄</span>
+                                                {g.cows > 0 && (
+                                                    <div className="absolute inset-0 bg-yellow-500/30 blur-xl rounded-full"></div>
+                                                )}
+                                            </div>
+                                            <span className={`text-sm font-bold transition-all ${g.cows > 0
+                                                ? 'text-yellow-300 scale-110'
+                                                : 'text-yellow-400/40'
+                                                }`}>
+                                                {g.cows} Vacas
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Footer Rules */}
+                    <div className="mt-8 text-center text-white/30 text-xs">
+                        <p>🐂 Toro: Dígito correcto, posición correcta</p>
+                        <p>🐄 Vaca: Dígito correcto, posición incorrecta</p>
                     </div>
                 </div>
 
-                {/* Footer Rules */}
-                <div className="mt-8 text-center text-white/30 text-xs">
-                    <p>🐂 Toro: Dígito correcto, posición correcta</p>
-                    <p>🐄 Vaca: Dígito correcto, posición incorrecta</p>
-                </div>
-            </div>
+                {/* Scratchpad Side Panel */}
+                <div className="flex flex-col gap-4">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-bold text-center">
+                        Descartar números
+                    </span>
+                    <div className="w-full md:w-48 bg-white/5 backdrop-blur-sm rounded-3xl p-4 sm:p-6 border border-white/10 flex flex-row md:grid md:grid-cols-2 gap-3 items-center justify-center flex-wrap shrink-0 shadow-inner shadow-black/20">
+                        {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
+                            <button
+                                key={digit}
+                                onClick={() => toggleScratch(digit)}
+                                className={`w-11 h-11 sm:w-14 sm:h-14 rounded-2xl font-mono font-bold text-xl transition-all duration-300 border relative overflow-hidden group hover:shadow-lg hover:shadow-purple-500/20 active:scale-90 ${scratchpad[digit]
+                                    ? 'bg-red-500/10 text-white/20 border-red-500/20 scale-95 grayscale'
+                                    : 'bg-gradient-to-br from-white/10 to-white/5 text-white border-white/10 hover:border-purple-400/50 hover:scale-110'
+                                    }`}
+                            >
+                                {digit}
+                                <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${scratchpad[digit] ? 'opacity-100' : 'opacity-0'}`}>
+                                    <div className="w-[120%] h-1 bg-red-500/60 rotate-45 transform origin-center shadow-sm"></div>
+                                    <div className="absolute w-[120%] h-1 bg-red-500/60 -rotate-45 transform origin-center shadow-sm"></div>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
 
-            {/* Scratchpad Side Panel */}
-            <div className="flex flex-col gap-4">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-bold text-center">
-                    Descartar números
-                </span>
-                <div className="w-full md:w-48 bg-white/5 backdrop-blur-sm rounded-3xl p-4 sm:p-6 border border-white/10 flex flex-row md:grid md:grid-cols-2 gap-3 items-center justify-center flex-wrap shrink-0 shadow-inner shadow-black/20">
-                    {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
-                        <button
-                            key={digit}
-                            onClick={() => toggleScratch(digit)}
-                            className={`w-11 h-11 sm:w-14 sm:h-14 rounded-2xl font-mono font-bold text-xl transition-all duration-300 border relative overflow-hidden group hover:shadow-lg hover:shadow-purple-500/20 active:scale-90 ${scratchpad[digit]
-                                ? 'bg-red-500/10 text-white/20 border-red-500/20 scale-95 grayscale'
-                                : 'bg-gradient-to-br from-white/10 to-white/5 text-white border-white/10 hover:border-purple-400/50 hover:scale-110'
-                                }`}
-                        >
-                            {digit}
-                            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${scratchpad[digit] ? 'opacity-100' : 'opacity-0'}`}>
-                                <div className="w-[120%] h-1 bg-red-500/60 rotate-45 transform origin-center shadow-sm"></div>
-                                <div className="absolute w-[120%] h-1 bg-red-500/60 -rotate-45 transform origin-center shadow-sm"></div>
-                            </div>
-                        </button>
-                    ))}
                 </div>
-
             </div>
         </div>
     );
