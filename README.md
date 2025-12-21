@@ -229,7 +229,7 @@ Este proyecto es de código abierto y está disponible bajo la licencia MIT.
 
 ## 👤 Autor
 
-**Luis Rodriguez**
+**Luis Roberto**
 - GitHub: [@Luiscr1104](https://github.com/Luiscr1104)
 
 ---
