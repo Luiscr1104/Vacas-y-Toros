@@ -16,17 +16,25 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
     const [isHost, setIsHost] = useState<boolean>(false);
     const [copied, setCopied] = useState<boolean>(false);
 
+    // Generate a short ID for display/sharing if we are host
+    const getShortId = (id: string) => id.substring(0, 6).toUpperCase();
+
     useEffect(() => {
         // Check if joining via URL
         const params = new URLSearchParams(window.location.search);
         const joinRoomId = params.get('room');
 
+        // Try to recover Peer ID from session storage to maintain connection on reload
+        const savedPeerId = sessionStorage.getItem('vyt_peer_id');
+
         // Initialize PeerJS
-        const newPeer = new Peer();
+        const newPeer = savedPeerId ? new Peer(savedPeerId) : new Peer();
 
         newPeer.on('open', (id) => {
+            console.log('Peer open with ID:', id);
             setPeerId(id);
             setPeer(newPeer);
+            sessionStorage.setItem('vyt_peer_id', id);
 
             if (joinRoomId) {
                 // Guest joining
@@ -36,7 +44,7 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
             } else {
                 // Host creating room
                 setIsHost(true);
-                setStatus('Sala creada. Comparte el enlace con tu amigo.');
+                setStatus('Sala lista. Comparte el enlace con tu amigo.');
             }
         });
 
@@ -175,6 +183,7 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
     };
 
     const shareUrl = `${window.location.origin}${window.location.pathname}?room=${peerId}`;
+    const shortRoomCode = getShortId(peerId);
 
     return (
         <div className="w-full max-w-2xl mx-auto p-8 flex flex-col gap-6 items-center">
@@ -213,33 +222,58 @@ export default function VSLobby({ onGameStart, onBack }: VSLobbyProps) {
 
                     {/* Host: Show share link */}
                     {isHost && peerId && !connection && (
-                        <div className="space-y-4">
-                            <div className="bg-black/30 rounded-xl p-4 border border-purple-400/30">
-                                <p className="text-sm text-white/60 mb-2">Enlace de Invitación:</p>
-                                <div className="bg-black/40 rounded-lg p-3 font-mono text-sm text-purple-300 break-all">
-                                    {shareUrl}
+                        <div className="space-y-6">
+                            <div className="bg-black/30 rounded-2xl p-6 border border-purple-400/30 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="text-4xl">👑</span>
+                                </div>
+                                <p className="text-sm text-white/60 mb-3 font-bold uppercase tracking-widest text-left">Tu Sala</p>
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex items-center justify-between bg-black/40 rounded-xl p-4 border border-white/5">
+                                        <div className="text-left">
+                                            <p className="text-[10px] text-white/40 uppercase font-black">Código de Sala</p>
+                                            <p className="text-2xl font-mono font-black text-purple-400 tracking-tighter">{shortRoomCode}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(shortRoomCode);
+                                                setCopied(true);
+                                                setTimeout(() => setCopied(false), 2000);
+                                            }}
+                                            className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                                        >
+                                            <span className="text-xs">{copied ? '✅' : '📋'}</span>
+                                        </button>
+                                    </div>
+                                    <div className="bg-black/40 rounded-xl p-3 font-mono text-[10px] text-white/30 break-all text-left border border-white/5">
+                                        {shareUrl}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                            <div className="flex flex-col gap-3 justify-center">
                                 <button
                                     onClick={handleNativeShare}
-                                    className="flex-1 px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-full transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+                                    className="w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black rounded-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-purple-900/40 border border-white/10"
                                 >
-                                    <span>📤 Enviar por WhatsApp / Otros</span>
+                                    <span className="text-xl">📤</span>
+                                    <span>Invitar Amigo</span>
                                 </button>
 
                                 <button
                                     onClick={shareLink}
-                                    className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white/80 rounded-full border border-white/10 transition-all text-sm"
+                                    className="w-full py-3 bg-white/5 hover:bg-white/10 text-white/70 rounded-xl border border-white/10 transition-all text-xs font-bold uppercase tracking-widest"
                                 >
-                                    {copied ? '✓ Copiado' : '📋 Copiar'}
+                                    {copied ? '✓ Enlace Copiado' : 'Copiar Enlace Directo'}
                                 </button>
                             </div>
 
-                            <p className="text-sm text-white/40">
-                                Esperando a que tu amigo se conecte...
-                            </p>
+                            <div className="flex items-center justify-center gap-3 pt-4">
+                                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-ping"></div>
+                                <p className="text-xs text-white/40 font-medium">
+                                    Esperando oponente...
+                                </p>
+                            </div>
                         </div>
                     )}
 

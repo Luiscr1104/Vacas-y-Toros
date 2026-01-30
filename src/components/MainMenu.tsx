@@ -61,14 +61,14 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
                 </div>
 
                 {/* Content */}
-                <div className="relative z-10 text-center space-y-8">
+                <div className="relative z-10 text-center space-y-10">
                     {/* Title */}
                     <div className="space-y-4">
-                        <h1 className="text-5xl sm:text-7xl font-black bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent mb-2 sm:mb-4 animate-in fade-in zoom-in-50 duration-700 leading-tight">
-                            VACAS Y TOROS
+                        <h1 className="text-6xl sm:text-8xl font-black bg-gradient-to-br from-white via-white/80 to-white/40 bg-clip-text text-transparent mb-2 sm:mb-4 animate-in fade-in zoom-in-50 duration-1000 leading-tight drop-shadow-2xl">
+                            VACAS <span className="text-gradient-vibrant">&</span> TOROS
                         </h1>
-                        <p className="text-lg sm:text-xl text-blue-200 font-medium tracking-wide animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '0.2s' }}>
-                            ¿Puedes adivinar el número?
+                        <p className="text-xl sm:text-2xl text-blue-200/80 font-medium tracking-[0.2em] uppercase animate-in fade-in slide-in-from-bottom-4 duration-1000" style={{ animationDelay: '0.3s' }}>
+                            Duelo de Mentes
                         </p>
                     </div>
 
@@ -76,22 +76,24 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
                     <div className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '0.4s' }}>
                         <h2 className="text-lg sm:text-xl font-bold text-white/90">¿Cómo jugar?</h2>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             {/* Toro Card */}
-                            <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border border-white/10 flex flex-row sm:flex-col items-center gap-4 sm:gap-3 transition-transform hover:scale-105 group text-left sm:text-center">
-                                <div className="text-4xl group-hover:animate-bounce shrink-0">🐂</div>
+                            <div className="premium-glass rounded-3xl p-6 flex flex-row sm:flex-col items-center gap-5 sm:gap-4 transition-all duration-500 hover:scale-[1.05] hover:shadow-green-500/20 group text-left sm:text-center relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full -mr-8 -mt-8 blur-2xl"></div>
+                                <div className="text-5xl group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300 shrink-0">🐂</div>
                                 <div>
-                                    <h4 className="font-black text-green-400 uppercase tracking-widest text-xs sm:text-sm mb-1">Toro</h4>
-                                    <p className="text-[11px] sm:text-xs text-white/60 leading-tight">Dígito correcto en posición <strong>correcta</strong>.</p>
+                                    <h4 className="font-black text-green-400 uppercase tracking-widest text-sm mb-2">Toro</h4>
+                                    <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-medium">Dígito correcto en posición <span className="text-green-400 font-black">correcta</span>.</p>
                                 </div>
                             </div>
 
                             {/* Vaca Card */}
-                            <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border border-white/10 flex flex-row sm:flex-col items-center gap-4 sm:gap-3 transition-transform hover:scale-105 group text-left sm:text-center">
-                                <div className="text-4xl group-hover:animate-bounce shrink-0">🐄</div>
+                            <div className="premium-glass rounded-3xl p-6 flex flex-row sm:flex-col items-center gap-5 sm:gap-4 transition-all duration-500 hover:scale-[1.05] hover:shadow-yellow-500/20 group text-left sm:text-center relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full -mr-8 -mt-8 blur-2xl"></div>
+                                <div className="text-5xl group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-300 shrink-0">🐄</div>
                                 <div>
-                                    <h4 className="font-black text-yellow-400 uppercase tracking-widest text-xs sm:text-sm mb-1">Vaca</h4>
-                                    <p className="text-[11px] sm:text-xs text-white/60 leading-tight">Dígito correcto en posición <strong>incorrecta</strong>.</p>
+                                    <h4 className="font-black text-yellow-400 uppercase tracking-widest text-sm mb-2">Vaca</h4>
+                                    <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-medium">Dígito correcto en posición <span className="text-yellow-400 font-black">incorrecta</span>.</p>
                                 </div>
                             </div>
                         </div>
@@ -190,7 +192,10 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
                                                 </span>
                                                 <span className="text-white font-bold text-sm tracking-wide">{score.name}</span>
                                             </div>
-                                            <div className="flex gap-4 text-xs font-mono">
+                                            <div className="flex gap-4 text-xs font-mono items-center">
+                                                <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase ${score.mode === 'vs' ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}`}>
+                                                    {score.mode || 'solo'}
+                                                </span>
                                                 <span className="text-purple-300">{score.attempts} <span className="text-[10px] opacity-60">pasos</span></span>
                                                 <span className="text-blue-300">{score.time}s</span>
                                             </div>

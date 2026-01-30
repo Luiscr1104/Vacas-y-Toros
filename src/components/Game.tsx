@@ -121,7 +121,7 @@ export default function Game({ onBack }: GameProps) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: playerName.trim(),
-                    attempts: guesses.length + 1, // Current guess counts too
+                    attempts: guesses.length,
                     time: gameTime,
                     mode: 'solo'
                 })

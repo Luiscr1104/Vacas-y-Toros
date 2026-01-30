@@ -30,7 +30,7 @@ export const POST: APIRoute = async ({ request }) => {
         const data = await request.json();
         const { name, attempts, time, mode } = data;
 
-        if (!name || !attempts || !time) {
+        if (name === undefined || attempts === undefined || time === undefined) {
             return new Response(JSON.stringify({ error: 'Missing fields' }), {
                 status: 400
             });

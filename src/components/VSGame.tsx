@@ -32,6 +32,11 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
     const [connectionReady, setConnectionReady] = useState<boolean>(false);
     const [scratchpad, setScratchpad] = useState<Record<string, boolean>>({});
     const [showHelp, setShowHelp] = useState<boolean>(false);
+    const [startTime, setStartTime] = useState<number>(0);
+    const [gameTime, setGameTime] = useState<number>(0);
+    const [playerName, setPlayerName] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [submitted, setSubmitted] = useState<boolean>(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const toggleScratch = (digit: string) => {
@@ -94,6 +99,7 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
         if (setupReady && opponentReady && gameState === 'setup') {
             console.log('Both players ready, transitioning to playing');
             audio.play('start');
+            setStartTime(Date.now());
             setTimeout(() => setGameState('playing'), 500);
         }
     }, [setupReady, opponentReady, gameState]);
@@ -147,6 +153,8 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
                 if (data.bulls === 4) {
                     audio.play('win');
                     setGameState('won');
+                    const duration = Math.floor((Date.now() - startTime) / 1000);
+                    setGameTime(duration);
                     // Reveal my secret to the opponent (the loser)
                     connection.send({
                         type: 'reveal_secret',
@@ -163,7 +171,35 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
                 break;
             case 'reveal_secret':
                 setOpponentSecret(data.secret);
+                // Even if I lost, reveal my opponent's secret and stop time if needed 
+                // (though time only matters for the winner's score)
                 break;
+        }
+    };
+
+    const submitScore = async () => {
+        if (!playerName.trim() || isSubmitting) return;
+
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/scores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: playerName.trim(),
+                    attempts: myGuesses.length,
+                    time: gameTime,
+                    mode: 'vs'
+                })
+            });
+
+            if (response.ok) {
+                setSubmitted(true);
+            }
+        } catch (e) {
+            console.error('Error submitting score:', e);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -248,16 +284,17 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
 
     if (gameState === 'setup') {
         return (
-            <div className="w-full max-w-md mx-auto p-8">
-                <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/20 relative">
+            <div className="w-full max-w-lg mx-auto p-4 sm:p-8">
+                <div className="premium-glass rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
                     <button
                         onClick={() => setShowHelp(true)}
-                        className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-white/40 hover:text-white transition-all text-sm font-bold bg-white/5 rounded-full border border-white/10"
+                        className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center text-white/60 hover:text-white transition-all text-xl font-black bg-white/5 rounded-full border border-white/10 hover:bg-white/10"
                     >
                         ?
                     </button>
-                    <h2 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
-                        Elige tu Número Secreto
+                    <h2 className="text-4xl font-black text-center mb-8 bg-gradient-to-br from-white to-white/40 bg-clip-text text-transparent leading-tight">
+                        Tu Código <br /><span className="text-gradient-vibrant">Secreto</span>
                     </h2>
 
                     {!connectionReady && (
@@ -331,21 +368,20 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
 
     return (
         <div className="w-full max-w-4xl mx-auto p-4 relative">
-            {/* Header / Back to Menu */}
-            <div className="flex justify-between items-center mb-10">
-                <div className="flex gap-3">
+            <div className="flex justify-between items-center mb-8 px-2">
+                <div className="flex gap-4">
                     <button
                         onClick={() => {
                             audio.play('click');
                             onExit();
                         }}
-                        className="flex items-center gap-2 text-white/60 hover:text-white transition-all text-sm font-bold bg-white/5 px-5 py-2.5 rounded-full border border-white/10 hover:bg-white/10 shadow-lg"
+                        className="flex items-center gap-3 text-white/70 hover:text-white transition-all text-xs font-black uppercase tracking-widest bg-white/5 px-6 py-3 rounded-2xl border border-white/10 hover:bg-white/10 shadow-xl backdrop-blur-md"
                     >
-                        <span>🏠</span> Menú Principal
+                        <span>🏠</span> Menú
                     </button>
                     <button
                         onClick={() => setShowHelp(true)}
-                        className="w-10 h-10 flex items-center justify-center text-white/60 hover:text-white transition-all text-lg font-bold bg-white/5 rounded-full hover:bg-white/10 border border-white/10"
+                        className="w-12 h-12 flex items-center justify-center text-white/60 hover:text-white transition-all text-xl font-black bg-white/5 rounded-2xl hover:bg-white/10 border border-white/10 backdrop-blur-md"
                         title="Cómo jugar"
                     >
                         ?
@@ -358,19 +394,28 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* My Side */}
-                <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
-                    <h3 className="text-xl font-bold text-center mb-4 text-purple-300">
-                        Tus Intentos {isMyTurn && '(Tu turno)'}
-                    </h3>
+                <div className={`premium-glass rounded-[32px] p-8 shadow-2xl transition-all duration-500 ${isMyTurn ? 'ring-2 ring-purple-500/50 scale-[1.02] bg-purple-500/5' : 'opacity-80'}`}>
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-xl font-black uppercase tracking-widest text-purple-300">Tus Intentos</h3>
+                        {isMyTurn && (
+                            <div className="flex items-center gap-2 bg-purple-500/20 px-3 py-1 rounded-full border border-purple-500/30">
+                                <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                                <span className="text-[10px] font-black text-purple-200">TU TURNO</span>
+                            </div>
+                        )}
+                    </div>
 
                     {gameState === 'playing' && (
-                        <form onSubmit={handleGuess} className="mb-4 relative group">
+                        <form onSubmit={handleGuess} className="mb-8 relative group">
                             <input
                                 ref={inputRef}
                                 type="text"
                                 maxLength={4}
                                 value={input}
-                                onChange={(e) => setInput(e.target.value)}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    setInput(val);
+                                }}
                                 disabled={!isMyTurn}
                                 placeholder={isMyTurn ? "Tu intento..." : "Espera tu turno"}
                                 inputMode="numeric"
@@ -449,27 +494,72 @@ export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps
 
             {/* Game Over */}
             {(gameState === 'won' || gameState === 'lost') && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-                    <div className="bg-white/10 backdrop-blur-md rounded-3xl p-12 shadow-2xl border border-white/20 text-center">
-                        <div className="text-6xl mb-4">{gameState === 'won' ? '🏆' : '😔'}</div>
-                        <h2 className="text-4xl font-bold mb-4">
-                            {gameState === 'won' ? '¡Ganaste!' : 'Perdiste'}
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[200] p-4">
+                    <div className="premium-glass rounded-[40px] p-12 max-w-md w-full shadow-2xl text-center relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500"></div>
+                        <div className="text-8xl mb-6 animate-bounce">{gameState === 'won' ? '🏆' : '💀'}</div>
+                        <h2 className="text-5xl font-black mb-2 tracking-tighter">
+                            {gameState === 'won' ? '¡VICTORIA!' : 'DERROTA'}
                         </h2>
-                        <p className="text-white/60 mb-6">
-                            El número era: <span className="text-2xl font-bold text-white tracking-widest ml-2">{opponentSecret || '...'}</span>
+                        <p className="text-white/40 uppercase tracking-[0.3em] text-[10px] font-black mb-8">
+                            {gameState === 'won' ? 'Has dominado el duelo' : 'Tu oponente fue más rápido'}
                         </p>
-                        <div className="flex flex-col gap-3">
+
+                        <div className="bg-black/40 rounded-3xl p-6 mb-8 border border-white/5 space-y-4">
+                            <div>
+                                <p className="text-xs text-white/30 uppercase font-black mb-1">Número del Oponente</p>
+                                <p className="text-4xl font-mono font-black tracking-[0.5em] text-white">
+                                    {opponentSecret || '----'}
+                                </p>
+                            </div>
+
+                            {gameState === 'won' && (
+                                <div className="pt-4 border-t border-white/5 space-y-4">
+                                    {!submitted ? (
+                                        <>
+                                            <p className="text-[10px] uppercase tracking-[0.2em] text-purple-300 font-bold">Hall of Fame</p>
+                                            <div className="flex flex-col gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={playerName}
+                                                    onChange={(e) => setPlayerName(e.target.value)}
+                                                    placeholder="Tu nombre..."
+                                                    maxLength={15}
+                                                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-center outline-none focus:border-purple-400 transition-all text-sm"
+                                                />
+                                                <button
+                                                    onClick={submitScore}
+                                                    disabled={!playerName.trim() || isSubmitting}
+                                                    className="w-full py-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl text-white font-bold text-xs shadow-lg shadow-purple-500/20 disabled:opacity-50"
+                                                >
+                                                    {isSubmitting ? 'Guardando...' : 'Guardar Récord'}
+                                                </button>
+                                            </div>
+                                            <p className="text-[10px] text-white/40 italic">
+                                                {myGuesses.length} intentos en {gameTime}s
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <div className="py-2">
+                                            <p className="text-green-300 text-xs font-bold">✨ ¡Guardado!</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col gap-4">
                             <button
                                 onClick={() => window.location.reload()}
-                                className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-full transition-all shadow-lg shadow-purple-500/30"
+                                className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black rounded-2xl transition-all shadow-xl shadow-purple-900/40 border border-white/10"
                             >
-                                Jugar de Nuevo
+                                REVANCHA
                             </button>
                             <button
                                 onClick={onExit}
-                                className="px-8 py-2 text-white/60 hover:text-white transition-colors text-sm font-bold"
+                                className="w-full py-3 text-white/50 hover:text-white transition-colors text-xs font-black uppercase tracking-widest"
                             >
-                                Salir al Menú Principal
+                                Salir al Menú
                             </button>
                         </div>
                     </div>
