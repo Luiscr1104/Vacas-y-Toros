@@ -1,212 +1,69 @@
-import React, { useState, useEffect } from 'react';
-import { audio } from '../lib/audio';
-
-type Score = {
-    name: string;
-    attempts: number;
-    time: number;
-    mode: string;
-    date: string;
-};
+import { useEffect, useState } from 'react';
+import Mascot from './Mascot';
+import Icon from './Icon';
+import { readStats, type Stats } from '../lib/stats';
+import { formatTime } from '../lib/game';
 
 interface MainMenuProps {
     onStartGame: (mode: 'solo' | 'vs') => void;
+    onTutorial: () => void;
 }
 
-const EXAMPLES = [
-    { secret: '1234', guess: '1478', bulls: 1, cows: 1 },
-    { secret: '5678', guess: '5612', bulls: 2, cows: 0 },
-    { secret: '9012', guess: '2109', bulls: 0, cows: 4 },
-];
-
-export default function MainMenu({ onStartGame }: MainMenuProps) {
-    const [scores, setScores] = useState<Score[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [exampleIndex, setExampleIndex] = useState(0);
-
-    useEffect(() => {
-        const fetchScores = async () => {
-            try {
-                const response = await fetch('/api/scores');
-                if (response.ok) {
-                    const data = await response.json();
-                    setScores(data);
-                }
-            } catch (e) {
-                console.error('Error fetching scores:', e);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchScores();
-    }, []);
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setExampleIndex((prev) => (prev + 1) % EXAMPLES.length);
-        }, 10000); // Increased to 10s for better readability
-        return () => clearInterval(timer);
-    }, []);
-
-    const currentExample = EXAMPLES[exampleIndex];
+export default function MainMenu({ onStartGame, onTutorial }: MainMenuProps) {
+    const [stats, setStats] = useState<Stats | null>(null);
+    useEffect(() => setStats(readStats()), []);
 
     return (
-        <div className="w-full max-w-2xl mx-auto p-4 sm:p-8 perspective-1000">
-            <div className="relative bg-white/10 backdrop-blur-md rounded-3xl p-6 sm:p-12 shadow-2xl border border-white/20 overflow-hidden">
-
-                {/* Animated background elements */}
-                <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                    <div className="absolute top-10 left-10 text-6xl opacity-10 animate-bounce">🐂</div>
-                    <div className="absolute bottom-10 right-10 text-6xl opacity-10 animate-bounce" style={{ animationDelay: '0.5s' }}>🐄</div>
+        <main className="home-page">
+            <section className="home-hero">
+                <div className="hero-copy">
+                    <div className="eyebrow"><span className="status-dot" /> UN CLÁSICO CON MUCHO CARÁCTER</div>
+                    <h1>Un poco de lógica.<br />Un montón de<br /><span className="fun-word">¡muuucha diversión!<svg viewBox="0 0 500 20" aria-hidden="true"><path d="M4 13Q240-4 492 10M15 18Q230 8 473 17" /></svg></span></h1>
+                    <p>Cuatro dígitos secretos. Dos cómplices con cuernos.<br className="desktop-break" /> ¿Tienes lo que hace falta para descifrar el código?</p>
+                    <div className="hero-actions">
+                        <button className="ranch-button primary play-button" onClick={() => onStartGame('solo')}>¡Vamos a jugar! <Icon name="arrow" /></button>
+                        <button className="text-button" onClick={onTutorial}><Icon name="help" size={19} /> ¿Cómo se juega?</button>
+                    </div>
+                    <div className="hero-footnote"><span className="mini-stars">✦ ✦ ✦</span> Gratis, sin registro y con mucha cabeza.</div>
                 </div>
+                <div className="ranch-scene" aria-label="Una vaca y un toro cartoon junto a un código secreto" role="img">
+                    <div className="scene-sun"><Icon name="spark" size={39} /></div>
+                    <div className="scene-cloud cloud-one" /><div className="scene-cloud cloud-two" />
+                    <div className="scene-bubble">¿Nos lees la mente?<span>✦</span></div>
+                    <div className="scene-hill hill-back" /><div className="scene-hill hill-front" />
+                    <div className="scene-fence"><i /><i /><i /><i /></div>
+                    <Mascot animal="cow" className="scene-cow" happy />
+                    <Mascot animal="bull" className="scene-bull" />
+                    <div className="secret-sign"><span>SE BUSCA: TU MEJOR JUGADA</span><div>{['?', '?', '?', '?'].map((digit, i) => <b key={i}>{digit}</b>)}</div></div>
+                    <span className="scene-flower flower-one">✳</span><span className="scene-flower flower-two">✳</span>
+                    <span className="scene-label">POCAS REGLAS. GRANDES PIQUES.</span>
+                </div>
+            </section>
 
-                {/* Content */}
-                <div className="relative z-10 text-center space-y-10">
-                    {/* Title */}
-                    <div className="space-y-4">
-                        <h1 className="text-6xl sm:text-8xl font-black bg-gradient-to-br from-white via-white/80 to-white/40 bg-clip-text text-transparent mb-2 sm:mb-4 animate-in fade-in zoom-in-50 duration-1000 leading-tight drop-shadow-2xl">
-                            VACAS <span className="text-gradient-vibrant">&</span> TOROS
-                        </h1>
-                        <p className="text-xl sm:text-2xl text-blue-200/80 font-medium tracking-[0.2em] uppercase animate-in fade-in slide-in-from-bottom-4 duration-1000" style={{ animationDelay: '0.3s' }}>
-                            Duelo de Mentes
-                        </p>
-                    </div>
-
-                    {/* Game Rules - More Visual */}
-                    <div className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '0.4s' }}>
-                        <h2 className="text-lg sm:text-xl font-bold text-white/90">¿Cómo jugar?</h2>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            {/* Toro Card */}
-                            <div className="premium-glass rounded-3xl p-6 flex flex-row sm:flex-col items-center gap-5 sm:gap-4 transition-all duration-500 hover:scale-[1.05] hover:shadow-green-500/20 group text-left sm:text-center relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full -mr-8 -mt-8 blur-2xl"></div>
-                                <div className="text-5xl group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300 shrink-0">🐂</div>
-                                <div>
-                                    <h4 className="font-black text-green-400 uppercase tracking-widest text-sm mb-2">Toro</h4>
-                                    <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-medium">Dígito correcto en posición <span className="text-green-400 font-black">correcta</span>.</p>
-                                </div>
-                            </div>
-
-                            {/* Vaca Card */}
-                            <div className="premium-glass rounded-3xl p-6 flex flex-row sm:flex-col items-center gap-5 sm:gap-4 transition-all duration-500 hover:scale-[1.05] hover:shadow-yellow-500/20 group text-left sm:text-center relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full -mr-8 -mt-8 blur-2xl"></div>
-                                <div className="text-5xl group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-300 shrink-0">🐄</div>
-                                <div>
-                                    <h4 className="font-black text-yellow-400 uppercase tracking-widest text-sm mb-2">Vaca</h4>
-                                    <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-medium">Dígito correcto en posición <span className="text-yellow-400 font-black">incorrecta</span>.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Example Box */}
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-left overflow-hidden relative min-h-[140px]">
-                            <p className="text-xs text-blue-200/60 uppercase tracking-widest font-bold mb-3 flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
-                                Ejemplo Rápido
-                            </p>
-                            <div key={exampleIndex} className="animate-in fade-in slide-in-from-right-8 duration-1000">
-                                <div className="flex flex-col gap-2">
-                                    <div className="flex justify-between items-center text-sm font-mono tracking-wider">
-                                        <span className="text-white/40">Secreto:</span>
-                                        <div className="flex gap-2">
-                                            {currentExample.secret.split('').map((d, i) => (
-                                                <span key={i} className="text-white w-4 text-center">{d}</span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-between items-center text-sm font-mono tracking-wider">
-                                        <span className="text-white/40">Tu intento:</span>
-                                        <div className="flex gap-2">
-                                            {currentExample.guess.split('').map((d, i) => (
-                                                <span key={i} className={`w-4 text-center font-bold ${currentExample.secret[i] === d ? 'text-green-400' : currentExample.secret.includes(d) ? 'text-yellow-400' : 'text-white'}`}>
-                                                    {d}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="h-px bg-white/10 my-1"></div>
-                                    <div className="flex justify-between items-center font-bold">
-                                        <span className="text-xs text-white/40">Resultado:</span>
-                                        <div className="flex gap-4">
-                                            <span className={`transition-all duration-300 ${currentExample.bulls > 0 ? 'text-green-300 scale-110' : 'text-white/20'}`}>
-                                                {currentExample.bulls} 🐂
-                                            </span>
-                                            <span className={`transition-all duration-300 ${currentExample.cows > 0 ? 'text-yellow-300 scale-110' : 'text-white/20'}`}>
-                                                {currentExample.cows} 🐄
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Game Mode Selection */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in zoom-in-50 duration-700" style={{ animationDelay: '0.6s' }}>
-                        {/* Solo Mode */}
-                        <button
-                            onClick={() => onStartGame('solo')}
-                            className="group relative p-4 sm:p-6 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 hover:from-purple-500/30 hover:to-indigo-500/30 border-2 border-purple-400/30 hover:border-purple-400/60 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/30 active:scale-95"
-                        >
-                            <div className="text-4xl sm:text-5xl mb-2 sm:mb-3 text-center">🎮</div>
-                            <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2 text-center">Solo</h3>
-                            <p className="text-xs sm:text-sm text-white/60 text-center">Juega contra la computadora</p>
-                            <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-2xl opacity-0 group-hover:opacity-10 blur-xl transition-opacity duration-300"></div>
-                        </button>
-
-                        {/* VS Mode */}
-                        <button
-                            onClick={() => onStartGame('vs')}
-                            className="group relative p-4 sm:p-6 bg-gradient-to-br from-pink-500/20 to-rose-500/20 hover:from-pink-500/30 hover:to-rose-500/30 border-2 border-pink-400/30 hover:border-pink-400/60 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-pink-500/30 active:scale-95"
-                        >
-                            <div className="text-4xl sm:text-5xl mb-2 sm:mb-3 text-center">⚔️</div>
-                            <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2 text-center">Modo VS</h3>
-                            <p className="text-xs sm:text-sm text-white/60 text-center">Juega contra otro jugador</p>
-                            <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-rose-500 rounded-2xl opacity-0 group-hover:opacity-10 blur-xl transition-opacity duration-300"></div>
-                        </button>
-                    </div>
-
-                    {/* Hall of Fame / Leaderboard */}
-                    <div className="mt-12 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000" style={{ animationDelay: '0.8s' }}>
-                        <div className="flex items-center justify-between px-2">
-                            <h2 className="text-xl font-black text-white/90 flex items-center gap-2">
-                                <span className="text-2xl">🏆</span> Salón de la Fama
-                            </h2>
-                            <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Top 10 Global</span>
-                        </div>
-
-                        <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden shadow-inner shadow-black/40">
-                            {loading ? (
-                                <div className="p-8 flex justify-center">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
-                                </div>
-                            ) : scores.length === 0 ? (
-                                <p className="p-8 text-white/40 italic text-sm">Sé el primero en aparecer aquí...</p>
-                            ) : (
-                                <div className="divide-y divide-white/5">
-                                    {scores.map((score, index) => (
-                                        <div key={index} className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
-                                            <div className="flex items-center gap-4">
-                                                <span className={`w-6 text-sm font-black ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-600' : 'text-white/20'}`}>
-                                                    #{index + 1}
-                                                </span>
-                                                <span className="text-white font-bold text-sm tracking-wide">{score.name}</span>
-                                            </div>
-                                            <div className="flex gap-4 text-xs font-mono items-center">
-                                                <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase ${score.mode === 'vs' ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}`}>
-                                                    {score.mode || 'solo'}
-                                                </span>
-                                                <span className="text-purple-300">{score.attempts} <span className="text-[10px] opacity-60">pasos</span></span>
-                                                <span className="text-blue-300">{score.time}s</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+            <section className="home-bottom" aria-label="Descubre el juego">
+                <div className="rules-panel paper-card">
+                    <div className="section-heading"><span className="eyebrow">EL SECRETO ESTÁ EN LAS PISTAS</span><span className="hand-note">fácil de aprender ↴</span></div>
+                    <div className="rule-pair">
+                        <div className="rule-item"><div className="portrait bull-portrait"><Mascot animal="bull" /></div><div><h2>¡Eso es un toro!</h2><p>Dígito correcto.<br /><strong>Posición correcta.</strong></p></div><span className="rule-badge bull-badge">JUSTO AHÍ</span></div>
+                        <div className="rule-item"><div className="portrait cow-portrait"><Mascot animal="cow" /></div><div><h2>¡Ahí va una vaca!</h2><p>Dígito correcto.<br /><strong>Posición equivocada.</strong></p></div><span className="rule-badge cow-badge">CASI, CASI</span></div>
                     </div>
                 </div>
-            </div>
-        </div>
+                <button className="duel-card" onClick={() => onStartGame('vs')}>
+                    <span className="duel-icon"><Icon name="users" size={26} /></span>
+                    <span className="eyebrow">LAS BUENAS RIVALIDADES</span>
+                    <h2>¿Y si retas<br />a un amigo?</h2>
+                    <span className="duel-link">Armar un duelo <Icon name="arrow" size={19} /></span>
+                    <span className="duel-doodle" aria-hidden="true">↗</span>
+                </button>
+            </section>
+
+            <section className="home-stats" aria-label="Tus estadísticas en este dispositivo">
+                <div className="stats-caption"><Icon name="trophy" /><span>TU PEQUEÑA<br /><strong>GRAN TRAYECTORIA</strong></span></div>
+                <div><strong>{stats?.wins ?? '—'}</strong><span>partidas resueltas</span></div>
+                <div><strong>{stats?.bestAttempts ?? '—'}</strong><span>mejor número de intentos</span></div>
+                <div><strong>{stats?.bestTime != null ? formatTime(stats.bestTime) : '—'}</strong><span>tu mejor tiempo</span></div>
+                <span className="stats-note">Cada detective<br />empieza por algún lado.</span>
+            </section>
+        </main>
     );
 }

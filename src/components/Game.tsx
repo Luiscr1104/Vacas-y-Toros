@@ -1,349 +1,172 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { audio } from '../lib/audio';
-
-type Guess = {
-    number: string;
-    bulls: number;
-    cows: number;
-};
-
-type GameStatus = 'playing' | 'won';
+import { evaluateGuess, formatTime, generateSecret, validateGuess, type Guess } from '../lib/game';
+import { recordWin } from '../lib/stats';
+import Icon from './Icon';
+import Mascot from './Mascot';
 
 interface GameProps {
     onBack?: () => void;
 }
 
 export default function Game({ onBack }: GameProps) {
-    const [secret, setSecret] = useState<string>('');
+    const [secret, setSecret] = useState('');
     const [guesses, setGuesses] = useState<Guess[]>([]);
-    const [input, setInput] = useState<string>('');
-    const [status, setStatus] = useState<GameStatus>('playing');
-    const [error, setError] = useState<string>('');
-    const [scratchpad, setScratchpad] = useState<Record<string, boolean>>({});
-    const [startTime, setStartTime] = useState<number>(0);
-    const [gameTime, setGameTime] = useState<number>(0);
-    const [playerName, setPlayerName] = useState<string>('');
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [submitted, setSubmitted] = useState<boolean>(false);
+    const [input, setInput] = useState('');
+    const [won, setWon] = useState(false);
+    const [error, setError] = useState('');
+    const [scratchpad, setScratchpad] = useState<string[]>([]);
+    const [elapsed, setElapsed] = useState(0);
+    const [newRecord, setNewRecord] = useState(false);
+    const [name, setName] = useState('');
+    const [submission, setSubmission] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const startedAt = useRef(0);
+    const locked = useRef(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const submissionId = useRef(0);
+    const latestGuess = guesses.at(-1);
 
-    // Initialize game
-    useEffect(() => {
-        startNewGame();
-    }, []);
-
-    const generateSecret = () => {
-        let numbers = Array.from({ length: 10 }, (_, i) => i.toString());
-        let result = '';
-        for (let i = 0; i < 4; i++) {
-            const index = Math.floor(Math.random() * numbers.length);
-            result += numbers[index];
-            numbers.splice(index, 1);
-        }
-        return result;
-    };
-
-    const startNewGame = () => {
-        audio.play('start');
+    const start = () => {
+        submissionId.current++;
+        locked.current = false;
+        startedAt.current = Date.now();
         setSecret(generateSecret());
         setGuesses([]);
-        setStatus('playing');
         setInput('');
+        setWon(false);
         setError('');
-        setScratchpad({});
-        setStartTime(Date.now());
-        setGameTime(0);
-        setSubmitted(false);
-        setPlayerName('');
-        setTimeout(() => inputRef.current?.focus(), 100);
+        setScratchpad([]);
+        setElapsed(0);
+        setNewRecord(false);
+        setName('');
+        setSubmission('idle');
+        inputRef.current?.focus();
     };
 
-    const calculateBullsCows = (guess: string, target: string) => {
-        let bulls = 0;
-        let cows = 0;
-        for (let i = 0; i < 4; i++) {
-            if (guess[i] === target[i]) {
-                bulls++;
-            } else if (target.includes(guess[i])) {
-                cows++;
-            }
-        }
-        return { bulls, cows };
-    };
+    useEffect(() => { start(); }, []);
+    useEffect(() => {
+        if (won) return;
+        const timer = window.setInterval(() => setElapsed(Math.floor((Date.now() - startedAt.current) / 1000)), 1000);
+        return () => window.clearInterval(timer);
+    }, [won]);
+    useEffect(() => () => { submissionId.current++; }, []);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-
-        if (status === 'won') return;
-
-        if (input.length !== 4) {
+    const submit = () => {
+        if (!secret || locked.current) return;
+        const invalid = validateGuess(input);
+        if (invalid) {
+            setError(invalid);
             audio.play('error');
-            setError('Debe tener 4 dígitos');
             return;
         }
-        if (!/^\d+$/.test(input)) {
+        if (guesses.some(guess => guess.number === input)) {
+            setError('Ya probaste ese número. ¡Prueba una nueva idea!');
             audio.play('error');
-            setError('Solo números');
             return;
         }
-        if (new Set(input).size !== 4) {
-            audio.play('error');
-            setError('Los dígitos deben ser únicos');
-            return;
-        }
-
-        const { bulls, cows } = calculateBullsCows(input, secret);
-        const newGuess = { number: input, bulls, cows };
-
-        setGuesses([newGuess, ...guesses]);
+        const result = evaluateGuess(input, secret);
+        setGuesses(previous => [...previous, { number: input, ...result }]);
         setInput('');
-
-        if (bulls === 4) {
+        setError('');
+        if (result.bulls === 4) {
+            locked.current = true;
+            const seconds = Math.floor((Date.now() - startedAt.current) / 1000);
+            setElapsed(seconds);
+            setNewRecord(recordWin(guesses.length + 1, seconds));
+            setWon(true);
             audio.play('win');
-            setStatus('won');
-            const duration = Math.floor((Date.now() - startTime) / 1000);
-            setGameTime(duration);
-        } else if (bulls > 0) {
-            audio.play('bull');
-        } else if (cows > 0) {
-            audio.play('cow');
+        } else {
+            audio.play(result.bulls ? 'bull' : result.cows ? 'cow' : 'click');
+            inputRef.current?.focus();
         }
     };
 
-    const submitScore = async () => {
-        if (!playerName.trim() || isSubmitting) return;
-
-        setIsSubmitting(true);
+    const saveScore = async () => {
+        if (!won || !name.trim() || submission === 'saving' || submission === 'saved') return;
+        const id = ++submissionId.current;
+        setSubmission('saving');
         try {
             const response = await fetch('/api/scores', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: playerName.trim(),
-                    attempts: guesses.length,
-                    time: gameTime,
-                    mode: 'solo'
-                })
+                body: JSON.stringify({ name: name.trim(), attempts: guesses.length, time: elapsed, mode: 'solo' }),
             });
-
-            if (response.ok) {
-                setSubmitted(true);
-            }
-        } catch (e) {
-            console.error('Error submitting score:', e);
-        } finally {
-            setIsSubmitting(false);
+            if (!response.ok) throw new Error('No se pudo guardar');
+            if (id === submissionId.current) setSubmission('saved');
+        } catch {
+            if (id === submissionId.current) setSubmission('error');
         }
     };
 
-    const toggleScratch = (digit: string) => {
-        audio.play('click');
-        setScratchpad(prev => ({
-            ...prev,
-            [digit]: !prev[digit]
-        }));
-    };
-
     return (
-        <div className="w-full max-w-4xl mx-auto p-4 perspective-1000 flex flex-col gap-6 items-center justify-center">
-            {onBack && (
-                <div className="w-full max-w-md md:max-w-2xl flex justify-start">
-                    <button
-                        onClick={() => {
-                            audio.play('click');
-                            onBack();
-                        }}
-                        className="text-white/50 hover:text-white transition-all bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10 text-xs font-bold flex items-center gap-2 shadow-lg"
-                    >
-                        <span>←</span> Menú
-                    </button>
-                </div>
-            )}
-
-            <div className="flex flex-col md:flex-row gap-8 items-start justify-center w-full">
-                {/* Main Game Card */}
-                <div className={`flex-1 w-full max-w-md relative bg-white/10 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/20 overflow-hidden transition-all duration-500 transform ${status === 'won' ? 'scale-105 border-green-400/50 shadow-green-500/20' : ''}`}>
-                    {/* Header */}
-                    <div className="text-center mb-8">
-                        <h1 className="text-4xl font-black bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent mb-2">
-                            VACAS Y TOROS
-                        </h1>
-                        <p className="text-blue-200 text-sm font-medium tracking-wide uppercase opacity-80">
-                            Adivina el número de 4 dígitos
-                        </p>
-                    </div>
-
-                    {/* Game Area */}
-                    <div className="space-y-6">
-                        {/* Input Form */}
-                        <form onSubmit={handleSubmit} className="relative group">
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                maxLength={4}
-                                value={input}
-                                onChange={(e) => {
-                                    if (e.target.value.length <= 4) setInput(e.target.value);
-                                    setError('');
-                                }}
-                                placeholder="Escribe 4 dígitos únicos..."
-                                disabled={status === 'won'}
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                className={`w-full bg-black/20 text-white text-center text-3xl font-mono py-4 rounded-2xl border-2 border-white/10 focus:border-purple-400 focus:shadow-lg focus:shadow-purple-500/20 outline-none transition-all duration-300 placeholder:text-white/10 placeholder:tracking-normal placeholder:text-lg hover:border-white/20 ${input ? 'tracking-[0.8em] pl-[0.8em]' : 'tracking-normal'}`}
-                            />
-                            {error && (
-                                <div className="absolute -bottom-6 left-0 right-0 text-center text-red-400 text-sm font-bold animate-bounce">
-                                    {error}
+        <main className="game-page">
+            <div className="game-topline">
+                <button className="text-button" onClick={onBack}><Icon name="back" size={18} /> Volver al rancho</button>
+                <span className="mode-pill"><span className="status-dot" /> MODO INDIVIDUAL</span>
+            </div>
+            <div className="game-layout">
+                <section className="game-board paper-card" aria-labelledby="game-title">
+                    <div className="board-heading"><div><span className="eyebrow">PON A PASTAR LAS NEURONAS</span><h1 id="game-title">{won ? '¡Caso resuelto!' : '¿Cuál es el código?'}</h1></div><div className="timer"><Icon name="clock" size={17} /> {formatTime(elapsed)}</div></div>
+                    {!won ? (
+                        <>
+                            <p className="board-description">4 dígitos diferentes. Todas las pistas que necesites.</p>
+                            {latestGuess && <div className="latest-clue"><span>Tu última idea <b>{latestGuess.number}</b></span><span className="result-badge bull-result">{latestGuess.bulls} <span>TOROS</span></span><span className="result-badge cow-result">{latestGuess.cows} <span>VACAS</span></span></div>}
+                            <form onSubmit={event => { event.preventDefault(); submit(); }} className="guess-form">
+                                <label className="sr-only" htmlFor="guess-input">Tu intento de cuatro dígitos únicos</label>
+                                <div className="code-input-wrap">
+                                    <div className="code-tiles" aria-hidden="true">{Array.from({ length: 4 }, (_, i) => <span className={`code-tile ${input[i] ? 'filled' : ''} ${i === input.length ? 'current' : ''}`} key={i}>{input[i] || <span className="tile-dot" />}</span>)}</div>
+                                    <input id="guess-input" ref={inputRef} className="code-input" value={input} onChange={event => { setInput(event.target.value.replace(/[^0-9]/g, '').slice(0, 4)); setError(''); }} inputMode="none" autoComplete="off" maxLength={4} aria-invalid={!!error} aria-describedby="guess-feedback" autoFocus />
                                 </div>
-                            )}
-                            <button
-                                type="submit"
-                                disabled={status === 'won' || input.length !== 4}
-                                className="absolute right-2 top-2 bottom-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-3 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:grayscale shadow-lg shadow-purple-500/30 flex items-center justify-center"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
-                            </button>
-                        </form>
-
-                        {/* Victory Message */}
-                        {status === 'won' && (
-                            <div className="text-center py-6 animate-in zoom-in-50 duration-500">
-                                <div className="text-6xl mb-2 animate-bounce">🏆</div>
-                                <h2 className="text-2xl font-bold text-green-300">¡Lo lograste!</h2>
-                                <p className="text-white/60 mb-4">Número: <span className="text-white font-mono font-bold tracking-widest">{secret}</span></p>
-
-                                {!submitted ? (
-                                    <div className="bg-black/30 rounded-2xl p-4 mb-6 border border-white/10 space-y-4">
-                                        <p className="text-xs uppercase tracking-[0.2em] text-purple-300 font-bold">Hall of Fame</p>
-                                        <div className="flex flex-col gap-2">
-                                            <input
-                                                type="text"
-                                                value={playerName}
-                                                onChange={(e) => setPlayerName(e.target.value)}
-                                                placeholder="Tu nombre..."
-                                                maxLength={15}
-                                                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-center outline-none focus:border-purple-400 transition-all text-sm"
-                                            />
-                                            <button
-                                                onClick={submitScore}
-                                                disabled={!playerName.trim() || isSubmitting}
-                                                className="w-full py-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-purple-500/20 disabled:opacity-50"
-                                            >
-                                                {isSubmitting ? 'Guardando...' : 'Guardar Récord'}
-                                            </button>
-                                        </div>
-                                        <p className="text-[10px] text-white/40 italic">
-                                            {guesses.length} intentos en {gameTime} segundos
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 mb-6 animate-in slide-in-from-bottom-2">
-                                        <p className="text-green-300 text-sm font-bold">✨ ¡Guardado en el Hall of Fame!</p>
-                                    </div>
+                                <div id="guess-feedback" className={`guess-feedback ${error ? 'has-error' : ''}`} aria-live="polite">{error || 'El cero también juega. No repitas dígitos.'}</div>
+                                <div className="number-keypad" aria-label="Teclado numérico">
+                                    {'123456789'.split('').map(digit => <button key={digit} type="button" disabled={input.length === 4} onClick={() => { setInput(previous => (previous + digit).slice(0, 4)); setError(''); }}>{digit}</button>)}
+                                    <button className="key-clear" type="button" onClick={() => { setInput(''); setError(''); }}>Borrar</button>
+                                    <button type="button" disabled={input.length === 4} onClick={() => { setInput(previous => (previous + '0').slice(0, 4)); setError(''); }}>0</button>
+                                    <button type="button" aria-label="Borrar último dígito" onClick={() => { setInput(previous => previous.slice(0, -1)); setError(''); }}><Icon name="delete" /></button>
+                                </div>
+                                <button className="ranch-button primary check-button" type="submit" disabled={input.length !== 4 || !secret}>Probar mi suerte <Icon name="arrow" /></button>
+                            </form>
+                        </>
+                    ) : (
+                        <section className="victory" aria-label="Resultado de la partida">
+                            <div className="victory-mascots"><Mascot animal="cow" happy /><span>✦</span><Mascot animal="bull" happy /></div>
+                            <span className="record-ribbon">{newRecord ? '¡NUEVO RÉCORD DE INTENTOS!' : '¡QUÉ BUENA CABEZA!'}</span>
+                            <p>El misterio era <strong className="secret-answer">{secret}</strong></p>
+                            <div className="victory-stats"><div><strong>{guesses.length}</strong><span>intentos</span></div><div><strong>{formatTime(elapsed)}</strong><span>tiempo total</span></div></div>
+                            <button className="ranch-button primary check-button" onClick={() => { audio.play('start'); start(); }}>¡Otra, otra! <Icon name="arrow" /></button>
+                            <p className="fine-print">Tu trayectoria se guarda en este navegador cuando el almacenamiento está disponible.</p>
+                            <details className="save-score"><summary>¿Guardar también en el ranking global?</summary>
+                                {submission === 'saved' ? <p role="status">¡Listo! Tu resultado está guardado.</p> : (
+                                    <form onSubmit={event => { event.preventDefault(); void saveScore(); }}>
+                                        <label htmlFor="player-name">Tu apodo</label>
+                                        <div><input id="player-name" maxLength={15} value={name} onChange={event => setName(event.target.value)} placeholder="Detective del rancho" disabled={submission === 'saving'} /><button className="ranch-button ink" disabled={!name.trim() || submission === 'saving'}>{submission === 'saving' ? 'Guardando…' : 'Guardar'}</button></div>
+                                        {submission === 'error' && <p role="alert">No pudimos conectar con el ranking. Tu récord local sigue aquí; puedes reintentar.</p>}
+                                    </form>
                                 )}
-
-                                <div className="flex flex-col gap-2">
-                                    <button
-                                        onClick={startNewGame}
-                                        className="px-6 py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 rounded-full text-sm font-bold transition-all duration-300 border border-green-400/30 hover:border-green-400/50 hover:scale-105 active:scale-95 shadow-lg shadow-green-500/10"
-                                    >
-                                        🎮 Jugar de Nuevo
-                                    </button>
-                                    {onBack && (
-                                        <button
-                                            onClick={onBack}
-                                            className="px-6 py-2 text-white/40 hover:text-white transition-colors text-xs font-bold"
-                                        >
-                                            Salir al Menú
-                                        </button>
-                                    )}
-                                </div>
+                            </details>
+                        </section>
+                    )}
+                </section>
+                <aside className="game-sidebar">
+                    <section className="history-card paper-card" aria-labelledby="history-title">
+                        <div className="section-heading"><h2 id="history-title">Tus pesquisas</h2><span className="count-pill">{guesses.length} intentos</span></div>
+                        {guesses.length === 0 ? <div className="empty-history"><Icon name="spark" size={34} /><strong>Todo gran misterio<br />empieza con una idea.</strong><p>Prueba un número y tus pistas<br />aparecerán aquí.</p></div> : (
+                            <div className="guess-history">
+                                <div className="history-labels"><span>INTENTO</span><span>TOROS / VACAS</span></div>
+                                <ol>{[...guesses].reverse().map((guess, index) => <li key={guess.number} className="guess-row"><span className="guess-index">{String(guesses.length - index).padStart(2, '0')}</span><strong>{guess.number}</strong><span className="result-badge bull-result" aria-label={`${guess.bulls} toros`}>{guess.bulls} <span>T</span></span><span className="result-badge cow-result" aria-label={`${guess.cows} vacas`}>{guess.cows} <span>V</span></span></li>)}</ol>
                             </div>
                         )}
-
-                        {/* History List */}
-                        <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                            {guesses.map((g, i) => (
-                                <div key={i} className="flex items-center justify-between bg-black/20 p-4 rounded-xl border border-white/5 hover:border-white/20 hover:bg-black/30 hover:scale-[1.02] transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 zoom-in-50 fill-mode-backwards cursor-default" style={{ animationDelay: `${i * 50}ms` }}>
-                                    <span className="text-2xl font-mono tracking-widest text-white/90">{g.number}</span>
-                                    <div className="flex gap-6">
-                                        {/* Bulls (Toros) */}
-                                        <div className={`flex flex-col items-center gap-1 transition-all duration-300 ${g.bulls > 0
-                                            ? 'scale-125'
-                                            : ''
-                                            }`}>
-                                            <div className={`relative ${g.bulls > 0 ? 'animate-pulse' : ''}`}>
-                                                <span className="text-3xl drop-shadow-lg">🐂</span>
-                                                {g.bulls > 0 && (
-                                                    <div className="absolute inset-0 bg-green-500/30 blur-xl rounded-full"></div>
-                                                )}
-                                            </div>
-                                            <span className={`text-sm font-bold transition-all ${g.bulls > 0
-                                                ? 'text-green-300 scale-110'
-                                                : 'text-green-400/40'
-                                                }`}>
-                                                {g.bulls} Toros
-                                            </span>
-                                        </div>
-                                        {/* Cows (Vacas) */}
-                                        <div className={`flex flex-col items-center gap-1 transition-all duration-300 ${g.cows > 0
-                                            ? 'scale-125'
-                                            : ''
-                                            }`}>
-                                            <div className={`relative ${g.cows > 0 ? 'animate-pulse' : ''}`}>
-                                                <span className="text-3xl drop-shadow-lg">🐄</span>
-                                                {g.cows > 0 && (
-                                                    <div className="absolute inset-0 bg-yellow-500/30 blur-xl rounded-full"></div>
-                                                )}
-                                            </div>
-                                            <span className={`text-sm font-bold transition-all ${g.cows > 0
-                                                ? 'text-yellow-300 scale-110'
-                                                : 'text-yellow-400/40'
-                                                }`}>
-                                                {g.cows} Vacas
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Footer Rules */}
-                    <div className="mt-8 text-center text-white/30 text-xs">
-                        <p>🐂 Toro: Dígito correcto, posición correcta</p>
-                        <p>🐄 Vaca: Dígito correcto, posición incorrecta</p>
-                    </div>
-                </div>
-
-                {/* Scratchpad Side Panel */}
-                <div className="flex flex-col gap-4">
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-bold text-center">
-                        Descartar números
-                    </span>
-                    <div className="w-full md:w-48 bg-white/5 backdrop-blur-sm rounded-3xl p-4 sm:p-6 border border-white/10 flex flex-row md:grid md:grid-cols-2 gap-3 items-center justify-center flex-wrap shrink-0 shadow-inner shadow-black/20">
-                        {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
-                            <button
-                                key={digit}
-                                onClick={() => toggleScratch(digit)}
-                                className={`w-11 h-11 sm:w-14 sm:h-14 rounded-2xl font-mono font-bold text-xl transition-all duration-300 border relative overflow-hidden group hover:shadow-lg hover:shadow-purple-500/20 active:scale-90 ${scratchpad[digit]
-                                    ? 'bg-red-500/10 text-white/20 border-red-500/20 scale-95 grayscale'
-                                    : 'bg-gradient-to-br from-white/10 to-white/5 text-white border-white/10 hover:border-purple-400/50 hover:scale-110'
-                                    }`}
-                            >
-                                {digit}
-                                <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${scratchpad[digit] ? 'opacity-100' : 'opacity-0'}`}>
-                                    <div className="w-[120%] h-1 bg-red-500/60 rotate-45 transform origin-center shadow-sm"></div>
-                                    <div className="absolute w-[120%] h-1 bg-red-500/60 -rotate-45 transform origin-center shadow-sm"></div>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-
-                </div>
+                        <p className="history-announcement sr-only" aria-live="polite">{guesses.length > 0 && `Intento ${guesses.length}: ${guesses.at(-1)?.number}. ${guesses.at(-1)?.bulls} toros y ${guesses.at(-1)?.cows} vacas.${won ? ' ¡Ganaste!' : ''}`}</p>
+                        <div className="history-legend"><span><i className="legend-dot green" /> Toro: está en su lugar</span><span><i className="legend-dot yellow" /> Vaca: está en otro lugar</span></div>
+                    </section>
+                    <section className="scratch-card" aria-labelledby="scratch-title">
+                        <div className="section-heading"><h2 id="scratch-title">Tu libreta de detective</h2><span aria-hidden="true">✎</span></div>
+                        <p>Tacha los dígitos que quieras descartar.<br />Las notas las decides tú.</p>
+                        <div className="scratch-digits">{'0123456789'.split('').map(digit => <button key={digit} aria-label={`${scratchpad.includes(digit) ? 'Recuperar' : 'Descartar'} ${digit}`} aria-pressed={scratchpad.includes(digit)} className={scratchpad.includes(digit) ? 'crossed' : ''} onClick={() => setScratchpad(previous => previous.includes(digit) ? previous.filter(item => item !== digit) : [...previous, digit])}>{digit}</button>)}</div>
+                    </section>
+                    <div className="sidebar-tip"><Mascot animal="cow" /><p>«No es cuestión de suerte.<br /><strong>Bueno… un poquito sí.»</strong></p></div>
+                </aside>
             </div>
-        </div>
+        </main>
     );
 }

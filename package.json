@@ -6,23 +6,36 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:integration": "node --experimental-strip-types --test tests/integration/*.test.mjs",
+    "test:e2e": "playwright test",
+    "check": "tsc --noEmit",
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/react": "^4.4.2",
-    "@astrojs/vercel": "^9.0.2",
-    "@tailwindcss/vite": "^4.1.18",
+    "@astrojs/react": "^7.1.9",
+    "@astrojs/vercel": "^11.0.22",
+    "@tailwindcss/vite": "^4.3.5",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "astro": "^5.16.6",
-    "howler": "^2.2.4",
-    "mongodb": "^7.0.0",
-    "peerjs": "^1.5.5",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "tailwindcss": "^4.1.18"
+    "astro": "^7.4.13",
+    "mongodb": "^7.9.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tailwindcss": "^4.3.5"
   },
   "devDependencies": {
-    "@types/howler": "^2.2.12"
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^24.19.4",
+    "mongodb-memory-server-core": "^11.4.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=24.13.0"
+  },
+  "overrides": {
+    "@vercel/routing-utils": {
+      "path-to-regexp": "6.3.0"
+    }
   }
 }

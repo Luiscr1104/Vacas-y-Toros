@@ -1,625 +1,160 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Peer from 'peerjs';
-import { audio } from '../lib/audio';
-
-type Guess = {
-    number: string;
-    bulls: number;
-    cows: number;
-};
-
-type GameState = 'setup' | 'playing' | 'won' | 'lost';
+import { useEffect, useState } from 'react';
+import type { DuelCommand, DuelView } from '../lib/duel-types';
+import { formatTime, validateGuess } from '../lib/game';
+import Icon from './Icon';
+import Mascot from './Mascot';
+import NumericEntry from './NumericEntry';
+import GuessHistory from './GuessHistory';
 
 interface VSGameProps {
-    peer: Peer;
-    connection: any;
-    isHost: boolean;
-    onExit: () => void;
+    room: DuelView;
+    busy: boolean;
+    offline: boolean;
+    onAction: (type: DuelCommand['type'], value?: string) => Promise<boolean>;
 }
 
-export default function VSGame({ peer, connection, isHost, onExit }: VSGameProps) {
-    const [mySecret, setMySecret] = useState<string>('');
-    const mySecretRef = useRef<string>(''); // Ref to hold the latest value
-    const [opponentSecret, setOpponentSecret] = useState<string>('');
-    const [myGuesses, setMyGuesses] = useState<Guess[]>([]);
-    const [opponentGuesses, setOpponentGuesses] = useState<Guess[]>([]);
-    const [input, setInput] = useState<string>('');
-    const [error, setError] = useState<string>('');
-    const [gameState, setGameState] = useState<GameState>('setup');
-    const [isMyTurn, setIsMyTurn] = useState<boolean>(isHost);
-    const [setupReady, setSetupReady] = useState<boolean>(false);
-    const [opponentReady, setOpponentReady] = useState<boolean>(false);
-    const [connectionReady, setConnectionReady] = useState<boolean>(false);
-    const [scratchpad, setScratchpad] = useState<Record<string, boolean>>({});
-    const [showHelp, setShowHelp] = useState<boolean>(false);
-    const [startTime, setStartTime] = useState<number>(0);
-    const [gameTime, setGameTime] = useState<number>(0);
-    const [playerName, setPlayerName] = useState<string>('');
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [submitted, setSubmitted] = useState<boolean>(false);
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    const toggleScratch = (digit: string) => {
-        audio.play('click');
-        setScratchpad(prev => ({
-            ...prev,
-            [digit]: !prev[digit]
-        }));
-    };
+export default function VSGame({ room, busy, offline, onAction }: VSGameProps) {
+    const me = room.players.find(player => player.id === room.you)!;
+    const rival = room.players.find(player => player.id !== room.you);
+    const [input, setInput] = useState('');
+    const [secret, setSecret] = useState('');
+    const [masked, setMasked] = useState(true);
+    const [error, setError] = useState('');
+    const [shareMessage, setShareMessage] = useState('');
+    const [scratchpad, setScratchpad] = useState<string[]>([]);
+    const [now, setNow] = useState(room.serverNow);
+    const myTurn = room.phase === 'playing' && room.turn === room.you;
+    const finished = room.phase === 'finished' || room.phase === 'closed';
+    const rivalAway = rival && (rival.left || now - rival.lastSeenAt > 15000);
+    const canClaim = rival && !rival.left && now - rival.lastSeenAt >= 90000 && ['playing', 'setup'].includes(room.phase);
+    const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}?room=${room.code}` : '';
+    const elapsed = room.startedAt ? Math.max(0, Math.floor(((room.endedAt ?? now) - room.startedAt) / 1000)) : 0;
 
     useEffect(() => {
-        console.log('Setting up connection listener');
-        console.log('Connection.open:', connection.open);
-
-        // Always listen for open event
-        const handleOpen = () => {
-            console.log('Connection opened event fired!');
-            setConnectionReady(true);
-        };
-
-        connection.on('open', handleOpen);
-
-        const handleData = (data: any) => {
-            console.log('Received data:', data);
-            handleMessage(data);
-        };
-
-        connection.on('data', handleData);
-
-        // Handle peer disconnection from signaling server
-        const handleDisconnect = () => {
-            console.log('Peer disconnected from server, attempting reconnect...');
-            peer.reconnect();
-        };
-
-        peer.on('disconnected', handleDisconnect);
-
-        // Force connection ready after a short delay
-        const timer = setTimeout(() => {
-            setConnectionReady(true);
-        }, 500);
-
-        return () => {
-            clearTimeout(timer);
-            connection.off('open', handleOpen);
-            connection.off('data', handleData);
-            peer.off('disconnected', handleDisconnect);
-        };
-    }, [connection, peer]);
-
-    // Auto-focus input when game starts
+        const receivedAt = Date.now();
+        setNow(room.serverNow);
+        const timer = setInterval(() => setNow(room.serverNow + Date.now() - receivedAt), 1000);
+        return () => clearInterval(timer);
+    }, [room.serverNow]);
+    useEffect(() => { setInput(''); setError(''); }, [me.guesses.length]);
+    useEffect(() => { if (me.ready) setSecret(''); }, [me.ready]);
     useEffect(() => {
-        if (gameState === 'playing' && isMyTurn && inputRef.current) {
-            setTimeout(() => inputRef.current?.focus(), 100);
-        }
-    }, [gameState, isMyTurn]);
+        setInput(''); setSecret(''); setScratchpad([]); setError(''); setMasked(true);
+    }, [room.round]);
 
-    // Start game when both players are ready
-    useEffect(() => {
-        if (setupReady && opponentReady && gameState === 'setup') {
-            console.log('Both players ready, transitioning to playing');
-            audio.play('start');
-            setStartTime(Date.now());
-            setTimeout(() => setGameState('playing'), 500);
-        }
-    }, [setupReady, opponentReady, gameState]);
-
-    const handleMessage = (data: any) => {
-        switch (data.type) {
-            case 'secret_ready':
-                console.log('Received secret_ready from opponent');
-                setOpponentReady(true);
-                // If I'm already ready, start the game
-                if (setupReady) {
-                    console.log('Both ready, starting game');
-                    setGameState('playing');
-                }
-                break;
-            case 'guess':
-                const result = calculateBullsCows(data.number, mySecretRef.current);
-                setOpponentGuesses(prev => [{
-                    number: data.number,
-                    bulls: result.bulls,
-                    cows: result.cows
-                }, ...prev]);
-
-                // Send result back
-                connection.send({
-                    type: 'guess_result',
-                    bulls: result.bulls,
-                    cows: result.cows
-                });
-
-                // Check if opponent won
-                if (result.bulls === 4) {
-                    audio.play('lost');
-                    setGameState('lost');
-                    // Reveal my secret to the opponent (the winner)
-                    connection.send({
-                        type: 'reveal_secret',
-                        secret: mySecretRef.current
-                    });
-                } else {
-                    setIsMyTurn(true);
-                }
-                break;
-            case 'guess_result':
-                setMyGuesses(prev => {
-                    const updated = [...prev];
-                    updated[0] = { ...updated[0], bulls: data.bulls, cows: data.cows };
-                    return updated;
-                });
-
-                if (data.bulls === 4) {
-                    audio.play('win');
-                    setGameState('won');
-                    const duration = Math.floor((Date.now() - startTime) / 1000);
-                    setGameTime(duration);
-                    // Reveal my secret to the opponent (the loser)
-                    connection.send({
-                        type: 'reveal_secret',
-                        secret: mySecretRef.current
-                    });
-                } else {
-                    if (data.bulls > 0) {
-                        audio.play('bull');
-                    } else if (data.cows > 0) {
-                        audio.play('cow');
-                    }
-                    setIsMyTurn(false);
-                }
-                break;
-            case 'reveal_secret':
-                setOpponentSecret(data.secret);
-                // Even if I lost, reveal my opponent's secret and stop time if needed 
-                // (though time only matters for the winner's score)
-                break;
-        }
-    };
-
-    const submitScore = async () => {
-        if (!playerName.trim() || isSubmitting) return;
-
-        setIsSubmitting(true);
+    const copyLink = async () => {
         try {
-            const response = await fetch('/api/scores', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: playerName.trim(),
-                    attempts: myGuesses.length,
-                    time: gameTime,
-                    mode: 'vs'
-                })
-            });
-
-            if (response.ok) {
-                setSubmitted(true);
-            }
-        } catch (e) {
-            console.error('Error submitting score:', e);
-        } finally {
-            setIsSubmitting(false);
+            await navigator.clipboard.writeText(shareUrl);
+            setShareMessage('¡Enlace copiado! Mándaselo a tu rival.');
+        } catch {
+            setShareMessage('No pudimos copiarlo automáticamente. Selecciona el enlace de abajo y cópialo.');
         }
     };
 
-    const calculateBullsCows = (guess: string, target: string) => {
-        let bulls = 0;
-        let cows = 0;
-        for (let i = 0; i < 4; i++) {
-            if (guess[i] === target[i]) {
-                bulls++;
-            } else if (target.includes(guess[i])) {
-                cows++;
-            }
-        }
-        return { bulls, cows };
+    const share = async () => {
+        if (!navigator.share) { await copyLink(); return; }
+        try { await navigator.share({ title: '¡Duelo en Vacas y Toros!', text: '¿Quién descifra el código primero?', url: shareUrl }); }
+        catch (failure) { if (!(failure instanceof Error && failure.name === 'AbortError')) await copyLink(); }
     };
 
-    const handleSetSecret = () => {
-        if (mySecret.length !== 4) {
-            setError('Debe ser 4 dígitos');
+    const submit = async (type: 'ready' | 'guess') => {
+        const value = type === 'ready' ? secret : input;
+        const invalid = validateGuess(value);
+        if (invalid) { setError(invalid); return; }
+        if (type === 'guess' && me.guesses.some(guess => guess.number === value)) {
+            setError('Ya probaste ese número. ¡Prueba una nueva idea!');
             return;
         }
-        if (!/^\d+$/.test(mySecret)) {
-            setError('Solo números');
-            return;
-        }
-        if (new Set(mySecret).size !== 4) {
-            setError('Dígitos únicos');
-            return;
-        }
-
-        if (!connectionReady) {
-            setError('Esperando conexión...');
-            console.log('Connection not ready yet');
-            return;
-        }
-
-        console.log('Setting my secret, sending ready signal');
-        console.log('Connection open?', connection.open);
-
-        // Update the ref so handleMessage has the latest value
-        mySecretRef.current = mySecret;
-        console.log('mySecretRef.current set to:', mySecretRef.current);
-
-        setSetupReady(true);
-        audio.play('click');
         setError('');
-
-        try {
-            connection.send({ type: 'secret_ready' });
-            console.log('Sent secret_ready message');
-        } catch (err) {
-            console.error('Error sending message:', err);
+        if (await onAction(type, value)) {
+            if (type === 'guess') setInput('');
+            else setSecret('');
         }
-        // Game will start via useEffect when both are ready
     };
-
-    const handleGuess = (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-
-        if (!isMyTurn) {
-            setError('No es tu turno');
-            return;
-        }
-
-        if (input.length !== 4 || !/^\d+$/.test(input) || new Set(input).size !== 4) {
-            setError('Número inválido');
-            return;
-        }
-
-        // Add guess with pending result
-        setMyGuesses(prev => [{ number: input, bulls: 0, cows: 0 }, ...prev]);
-
-        // Send guess to opponent
-        connection.send({
-            type: 'guess',
-            number: input
-        });
-
-        setInput('');
-    };
-
-    if (gameState === 'setup') {
-        return (
-            <div className="w-full max-w-lg mx-auto p-4 sm:p-8">
-                <div className="premium-glass rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden backdrop-blur-xl">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-                    <button
-                        onClick={() => setShowHelp(true)}
-                        className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center text-white/60 hover:text-white transition-all text-xl font-black bg-white/5 rounded-full border border-white/10 hover:bg-white/10"
-                    >
-                        ?
-                    </button>
-                    <h2 className="text-4xl font-black text-center mb-8 bg-gradient-to-br from-white to-white/40 bg-clip-text text-transparent leading-tight">
-                        Tu Código <br /><span className="text-gradient-vibrant">Secreto</span>
-                    </h2>
-
-                    {!connectionReady && (
-                        <div className="mb-4 bg-yellow-500/20 border border-yellow-400/40 rounded-xl p-3 text-center">
-                            <p className="text-yellow-300 text-sm">
-                                ⏳ Estableciendo conexión...
-                            </p>
-                        </div>
-                    )}
-
-                    <div className="space-y-4">
-                        <div className="relative group">
-                            <input
-                                type="text"
-                                maxLength={4}
-                                value={mySecret}
-                                onChange={(e) => {
-                                    setMySecret(e.target.value);
-                                    setError('');
-                                }}
-                                placeholder="4 dígitos únicos"
-                                disabled={setupReady || !connectionReady}
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                className="w-full bg-black/20 text-white text-center text-3xl tracking-[1em] font-mono py-4 rounded-2xl border-2 border-white/10 focus:border-purple-400 outline-none transition-all disabled:opacity-50 placeholder:text-white/20 placeholder:tracking-normal placeholder:text-lg"
-                            />
-                            <button
-                                onClick={handleSetSecret}
-                                disabled={setupReady || !connectionReady || mySecret.length !== 4}
-                                className="absolute right-2 top-2 bottom-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-0 shadow-lg shadow-purple-500/30 flex items-center justify-center"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
-                            </button>
-                        </div>
-
-                        {error && (
-                            <p className="text-red-400 text-sm text-center">{error}</p>
-                        )}
-
-                        <button
-                            onClick={handleSetSecret}
-                            disabled={setupReady || !connectionReady}
-                            className="w-full px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-full transition-all disabled:opacity-50"
-                        >
-                            {setupReady ? '✓ Listo!' : 'Confirmar'}
-                        </button>
-
-                        {setupReady && !opponentReady && (
-                            <div className="text-center space-y-2">
-                                <div className="flex justify-center">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-400"></div>
-                                </div>
-                                <p className="text-white/60 text-sm">
-                                    Esperando a tu oponente...
-                                </p>
-                            </div>
-                        )}
-
-                        {setupReady && opponentReady && (
-                            <div className="bg-green-500/20 border border-green-400/40 rounded-xl p-4 text-center animate-pulse">
-                                <p className="text-green-300 font-bold">
-                                    ¡Ambos listos! Iniciando juego...
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     return (
-        <div className="w-full max-w-4xl mx-auto p-4 relative">
-            <div className="flex justify-between items-center mb-8 px-2">
-                <div className="flex gap-4">
-                    <button
-                        onClick={() => {
-                            audio.play('click');
-                            onExit();
-                        }}
-                        className="flex items-center gap-3 text-white/70 hover:text-white transition-all text-xs font-black uppercase tracking-widest bg-white/5 px-6 py-3 rounded-2xl border border-white/10 hover:bg-white/10 shadow-xl backdrop-blur-md"
-                    >
-                        <span>🏠</span> Menú
-                    </button>
-                    <button
-                        onClick={() => setShowHelp(true)}
-                        className="w-12 h-12 flex items-center justify-center text-white/60 hover:text-white transition-all text-xl font-black bg-white/5 rounded-2xl hover:bg-white/10 border border-white/10 backdrop-blur-md"
-                        title="Cómo jugar"
-                    >
-                        ?
-                    </button>
-                </div>
-                <div className="hidden sm:block text-white/20 text-xs font-mono uppercase tracking-widest">
-                    Modo VS en Línea
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* My Side */}
-                <div className={`premium-glass rounded-[32px] p-8 shadow-2xl transition-all duration-500 ${isMyTurn ? 'ring-2 ring-purple-500/50 scale-[1.02] bg-purple-500/5' : 'opacity-80'}`}>
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-black uppercase tracking-widest text-purple-300">Tus Intentos</h3>
-                        {isMyTurn && (
-                            <div className="flex items-center gap-2 bg-purple-500/20 px-3 py-1 rounded-full border border-purple-500/30">
-                                <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-                                <span className="text-[10px] font-black text-purple-200">TU TURNO</span>
-                            </div>
-                        )}
+        <>
+            <section className="duel-heading">
+                <div><span className="eyebrow">SALA {room.code} · RONDA {room.round}</span><h1>{room.phase === 'waiting' ? 'Falta tu contrincante.' : finished ? 'Un duelo para recordar.' : 'Que gane la mejor cabeza.'}</h1></div>
+                <div className={`connection-label ${offline ? 'disconnected' : ''}`} role="status"><span className="status-dot" />{offline ? 'Reconectando…' : 'Sala sincronizada'}</div>
+            </section>
+            <section className="duel-players" aria-label="Jugadores y marcador">
+                {room.players.map((player, index) => (
+                    <div className={`duel-player ${room.turn === player.id ? 'active-player' : ''}`} key={player.id}>
+                        <Mascot animal={index === 0 ? 'cow' : 'bull'} happy={room.winner === player.id} />
+                        <div><strong>{player.name}{player.id === room.you ? ' (tú)' : ''}</strong><span>{player.left ? 'Salió del duelo' : player.id !== room.you && rivalAway ? 'Sin señal · esperando su vuelta' : room.phase === 'setup' ? (player.ready ? 'Código confirmado ✓' : 'Preparando su código') : room.phase === 'playing' ? (room.turn === player.id ? 'Está pensando…' : 'Esperando su turno') : 'En el rancho'}</span></div>
+                        <b className="duel-wins" aria-label={`${player.wins} rondas ganadas`}>{player.wins}</b>
                     </div>
+                ))}
+                {!rival && <div className="duel-player missing-player"><Icon name="users" size={36} /><div><strong>Tu futuro rival</strong><span>Compártele la invitación</span></div><b className="duel-wins">0</b></div>}
+            </section>
 
-                    {gameState === 'playing' && (
-                        <form onSubmit={handleGuess} className="mb-8 relative group">
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                maxLength={4}
-                                value={input}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, '');
-                                    setInput(val);
-                                }}
-                                disabled={!isMyTurn}
-                                placeholder={isMyTurn ? "Tu intento..." : "Espera tu turno"}
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                className={`w-full bg-black/20 text-white text-center text-2xl font-mono py-3 rounded-xl border-2 border-white/10 focus:border-purple-400 outline-none transition-all disabled:opacity-50 placeholder:text-white/20 placeholder:tracking-normal placeholder:text-lg ${input ? 'tracking-widest pl-4' : 'tracking-normal'}`}
-                            />
-                            <button
-                                type="submit"
-                                disabled={!isMyTurn || input.length !== 4}
-                                className={`absolute right-1.5 top-1.5 bottom-1.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-3 rounded-lg transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center shadow-lg shadow-purple-500/30 ${(!isMyTurn || input.length !== 4) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
-                            </button>
-                            {error && <p className="text-red-400 text-xs mt-1 absolute -bottom-5 left-0 right-0 text-center">{error}</p>}
-                        </form>
-                    )}
-
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                        {myGuesses.map((g, i) => (
-                            <div key={i} className="bg-black/20 p-3 rounded-xl flex justify-between items-center">
-                                <span className="font-mono text-lg">{g.number}</span>
-                                <div className="flex gap-3 text-sm">
-                                    <span className="text-green-300">🐂 {g.bulls}</span>
-                                    <span className="text-yellow-300">🐄 {g.cows}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Opponent Side */}
-                <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
-                    <h3 className="text-xl font-bold text-center mb-4 text-pink-300">
-                        Oponente {!isMyTurn && '(Su turno)'}
-                    </h3>
-
-                    <div className="space-y-2 max-h-96 overflow-y-auto mt-16">
-                        {opponentGuesses.map((g, i) => (
-                            <div key={i} className="bg-black/20 p-3 rounded-xl flex justify-between items-center">
-                                <span className="font-mono text-lg">{g.number}</span>
-                                <div className="flex gap-3 text-sm">
-                                    <span className="text-green-300">🐂 {g.bulls}</span>
-                                    <span className="text-yellow-300">🐄 {g.cows}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-            {/* Scratchpad (Number Tracker) */}
-            {gameState === 'playing' && (
-                <div className="mt-8 flex flex-col gap-3 items-center">
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-bold">
-                        Descartar números
-                    </span>
-                    <div className="w-full max-w-lg md:max-w-md bg-white/5 backdrop-blur-sm rounded-3xl p-4 sm:p-6 border border-white/10 flex flex-row md:grid md:grid-cols-5 gap-3 items-center justify-center flex-wrap shadow-inner shadow-black/20">
-                        {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
-                            <button
-                                key={digit}
-                                onClick={() => toggleScratch(digit)}
-                                className={`w-11 h-11 sm:w-14 sm:h-14 md:w-auto md:h-14 rounded-2xl font-mono font-bold text-xl transition-all duration-300 border relative overflow-hidden group hover:shadow-lg hover:shadow-purple-500/20 active:scale-90 ${scratchpad[digit]
-                                    ? 'bg-red-500/10 text-white/20 border-red-500/20 scale-95 grayscale'
-                                    : 'bg-gradient-to-br from-white/10 to-white/5 text-white border-white/10 hover:border-purple-400/50 hover:scale-110'
-                                    }`}
-                            >
-                                {digit}
-                                <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${scratchpad[digit] ? 'opacity-100' : 'opacity-0'}`}>
-                                    <div className="w-[120%] h-1 bg-red-500/60 rotate-45 transform origin-center shadow-sm"></div>
-                                    <div className="absolute w-[120%] h-1 bg-red-500/60 -rotate-45 transform origin-center shadow-sm"></div>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
+            {room.phase === 'waiting' && (
+                <section className="invite-card paper-card">
+                    <span className="eyebrow">LAS BUENAS RIVALIDADES SE COMPARTEN</span>
+                    <h2>Invita a otra mente inquieta.</h2>
+                    <p>Pásale el enlace o este código. La sala admite dos jugadores.</p>
+                    <strong className="invite-code">{room.code}</strong>
+                    <div className="invite-actions"><button className="ranch-button primary" onClick={() => void share()}><Icon name="users" size={19} /> Invitar a un amigo</button><button className="text-button" onClick={() => void copyLink()}>Copiar enlace <Icon name="arrow" size={18} /></button></div>
+                    <label className="sr-only" htmlFor="invite-url">Enlace de invitación</label>
+                    <input id="invite-url" value={shareUrl} readOnly onFocus={event => event.target.select()} />
+                    <p className="fine-print" role="status">{shareMessage || 'Mantén esta pestaña abierta mientras llega tu rival. Podrás recargar sin perder tu lugar.'}</p>
+                </section>
             )}
 
-            {/* Game Over */}
-            {(gameState === 'won' || gameState === 'lost') && (
-                <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[200] p-4">
-                    <div className="premium-glass rounded-[40px] p-12 max-w-md w-full shadow-2xl text-center relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500"></div>
-                        <div className="text-8xl mb-6 animate-bounce">{gameState === 'won' ? '🏆' : '💀'}</div>
-                        <h2 className="text-5xl font-black mb-2 tracking-tighter">
-                            {gameState === 'won' ? '¡VICTORIA!' : 'DERROTA'}
-                        </h2>
-                        <p className="text-white/40 uppercase tracking-[0.3em] text-[10px] font-black mb-8">
-                            {gameState === 'won' ? 'Has dominado el duelo' : 'Tu oponente fue más rápido'}
-                        </p>
-
-                        <div className="bg-black/40 rounded-3xl p-6 mb-8 border border-white/5 space-y-4">
-                            <div>
-                                <p className="text-xs text-white/30 uppercase font-black mb-1">Número del Oponente</p>
-                                <p className="text-4xl font-mono font-black tracking-[0.5em] text-white">
-                                    {opponentSecret || '----'}
-                                </p>
-                            </div>
-
-                            {gameState === 'won' && (
-                                <div className="pt-4 border-t border-white/5 space-y-4">
-                                    {!submitted ? (
-                                        <>
-                                            <p className="text-[10px] uppercase tracking-[0.2em] text-purple-300 font-bold">Hall of Fame</p>
-                                            <div className="flex flex-col gap-2">
-                                                <input
-                                                    type="text"
-                                                    value={playerName}
-                                                    onChange={(e) => setPlayerName(e.target.value)}
-                                                    placeholder="Tu nombre..."
-                                                    maxLength={15}
-                                                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-center outline-none focus:border-purple-400 transition-all text-sm"
-                                                />
-                                                <button
-                                                    onClick={submitScore}
-                                                    disabled={!playerName.trim() || isSubmitting}
-                                                    className="w-full py-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl text-white font-bold text-xs shadow-lg shadow-purple-500/20 disabled:opacity-50"
-                                                >
-                                                    {isSubmitting ? 'Guardando...' : 'Guardar Récord'}
-                                                </button>
-                                            </div>
-                                            <p className="text-[10px] text-white/40 italic">
-                                                {myGuesses.length} intentos en {gameTime}s
-                                            </p>
-                                        </>
-                                    ) : (
-                                        <div className="py-2">
-                                            <p className="text-green-300 text-xs font-bold">✨ ¡Guardado!</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex flex-col gap-4">
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black rounded-2xl transition-all shadow-xl shadow-purple-900/40 border border-white/10"
-                            >
-                                REVANCHA
-                            </button>
-                            <button
-                                onClick={onExit}
-                                className="w-full py-3 text-white/50 hover:text-white transition-colors text-xs font-black uppercase tracking-widest"
-                            >
-                                Salir al Menú
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            {room.phase === 'setup' && (
+                <section className="duel-setup paper-card">
+                    <Mascot animal={me.id === room.players[0].id ? 'cow' : 'bull'} className="setup-mascot" />
+                    <span className="eyebrow">TU SECRETO SE QUEDA ENTRE NOSOTROS</span>
+                    <h2>{me.ready ? 'Tu código está a buen recaudo.' : 'Elige tu código secreto.'}</h2>
+                    <p>{me.ready ? 'En cuanto tu rival confirme el suyo, empieza el duelo.' : 'Cuatro dígitos diferentes. Tu rival tendrá que adivinarlos.'}</p>
+                    {!me.ready && <form onSubmit={event => { event.preventDefault(); void submit('ready'); }}>
+                        <NumericEntry id="duel-secret" label="Tu código secreto de cuatro dígitos únicos" value={secret} onChange={value => { setSecret(value); setError(''); }} disabled={busy || offline} masked={masked} feedbackId="secret-feedback" invalid={!!error} />
+                        <div className="secret-controls"><p id="secret-feedback" className={error ? 'duel-error' : 'fine-print'} role={error ? 'alert' : undefined}>{error || 'El cero también puede ir primero.'}</p><button type="button" className="text-button" onClick={() => setMasked(!masked)}>{masked ? 'Mostrar' : 'Ocultar'}</button></div>
+                        <button className="ranch-button primary check-button" disabled={busy || offline || secret.length !== 4}>{busy ? 'Confirmando…' : '¡Este es mi secreto!'} <Icon name="arrow" /></button>
+                    </form>}
+                    {me.ready && <div className="ready-stamp" role="status">✓ CÓDIGO CONFIRMADO</div>}
+                </section>
             )}
-            {/* Instructions Modal */}
-            {showHelp && (
-                <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-                    <div className="bg-white/10 border border-white/20 rounded-3xl p-8 max-w-lg w-full shadow-2xl relative animate-in zoom-in-95 duration-200">
-                        <button
-                            onClick={() => setShowHelp(false)}
-                            className="absolute top-4 right-4 text-white/40 hover:text-white text-2xl font-bold p-2"
-                        >
-                            ×
-                        </button>
 
-                        <h2 className="text-3xl font-black mb-6 bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                            ¿Cómo jugar?
-                        </h2>
-
-                        <div className="space-y-6 text-white/80">
-                            <section>
-                                <p className="leading-relaxed text-sm">
-                                    Adivina el número secreto de 4 dígitos únicos de tu oponente antes que él adivine el tuyo.
-                                </p>
-                            </section>
-
-                            <section className="grid grid-cols-1 gap-4">
-                                <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <span className="text-2xl">🐂</span>
-                                        <h4 className="font-bold text-green-400 uppercase tracking-wider text-xs">Toros</h4>
-                                    </div>
-                                    <p className="text-xs">Número correcto en la posición <strong>correcta</strong>.</p>
-                                </div>
-
-                                <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <span className="text-2xl">🐄</span>
-                                        <h4 className="font-bold text-yellow-400 uppercase tracking-wider text-xs">Vacas</h4>
-                                    </div>
-                                    <p className="text-xs">Número correcto en la posición <strong>incorrecta</strong>.</p>
-                                </div>
-                            </section>
-
-                            <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-400/20 text-xs italic">
-                                Ejemplo: Secreto 1234, Adivinas 1478: <br />
-                                <strong>1 Toro</strong> (el 1) y <strong>1 Vaca</strong> (el 4).
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={() => setShowHelp(false)}
-                            className="w-full mt-8 py-3 bg-white text-black font-bold rounded-2xl hover:bg-blue-50 transition-colors shadow-lg"
-                        >
-                            ¡Entendido!
-                        </button>
+            {room.phase === 'playing' && (
+                <>
+                    <div className={`turn-banner ${myTurn ? 'your-turn' : ''}`} role="status"><Icon name={myTurn ? 'spark' : 'clock'} size={21} /><strong>{myTurn ? '¡Tu turno! Dale una vuelta al misterio.' : `Turno de ${rival?.name}. Tu libreta sigue disponible.`}</strong><span><Icon name="clock" size={15} /> {formatTime(elapsed)}</span></div>
+                    <div className="game-layout duel-game-layout">
+                        <section className="game-board paper-card" aria-labelledby="duel-guess-title">
+                            <div className="board-heading"><div><span className="eyebrow">EL CÓDIGO DE TU RIVAL</span><h2 id="duel-guess-title">¿Qué estará tramando?</h2></div></div>
+                            <p className="board-description">El servidor comprueba las pistas y cambia el turno.</p>
+                            {me.guesses.at(-1) && <div className="latest-clue"><span>Tu última idea <b>{me.guesses.at(-1)!.number}</b></span><span className="result-badge bull-result">{me.guesses.at(-1)!.bulls} <span>TOROS</span></span><span className="result-badge cow-result">{me.guesses.at(-1)!.cows} <span>VACAS</span></span></div>}
+                            <form onSubmit={event => { event.preventDefault(); if (myTurn && !busy && !offline) void submit('guess'); }}>
+                                <NumericEntry id="duel-guess" label="Tu intento contra el rival" value={input} onChange={value => { setInput(value); setError(''); }} disabled={!myTurn || busy || offline} feedbackId="duel-guess-feedback" invalid={!!error} />
+                                <p id="duel-guess-feedback" className={`guess-feedback ${error ? 'has-error' : ''}`} aria-live="polite">{error || (offline ? 'Estamos recuperando la conexión. Tu partida sigue guardada.' : myTurn ? 'Cuatro dígitos únicos. ¡A por ello!' : 'Espera la jugada de tu rival.')}</p>
+                                <button className="ranch-button primary check-button" disabled={!myTurn || busy || offline || input.length !== 4}>{busy ? 'Comprobando…' : 'Lanzar mi intento'} <Icon name="arrow" /></button>
+                            </form>
+                            <div className="scratch-card duel-scratch"><div className="section-heading"><h3>Tu libreta de detective</h3><span aria-hidden="true">✎</span></div><p>Tus notas son privadas y no cambian las pistas.</p><div className="scratch-digits">{'0123456789'.split('').map(digit => <button key={digit} className={scratchpad.includes(digit) ? 'crossed' : ''} aria-pressed={scratchpad.includes(digit)} aria-label={`${scratchpad.includes(digit) ? 'Recuperar' : 'Descartar'} ${digit}`} onClick={() => setScratchpad(previous => previous.includes(digit) ? previous.filter(item => item !== digit) : [...previous, digit])}>{digit}</button>)}</div></div>
+                        </section>
+                        <aside className="game-sidebar"><GuessHistory title="Tus pesquisas" guesses={me.guesses} /><GuessHistory title={`Las ideas de ${rival?.name}`} guesses={rival?.guesses || []} /></aside>
                     </div>
-                </div>
+                    <p className="sr-only" aria-live="polite">{me.guesses.length > 0 ? `Tu último intento: ${me.guesses.at(-1)!.number}, ${me.guesses.at(-1)!.bulls} toros y ${me.guesses.at(-1)!.cows} vacas.` : ''}</p>
+                </>
             )}
-        </div>
+
+            {finished && (
+                <section className="duel-result paper-card" aria-labelledby="duel-result-title">
+                    <div className="victory-mascots"><Mascot animal="cow" happy={room.winner === room.players[0].id} /><span>✦</span><Mascot animal="bull" happy={room.winner === room.players[1]?.id} /></div>
+                    <span className="eyebrow">{room.reason === 'guessed' ? 'MISTERIO RESUELTO' : room.reason === 'forfeit' ? 'DUELO TERMINADO POR ABANDONO' : 'SALA CERRADA'}</span>
+                    <h2 id="duel-result-title">{room.winner ? room.winner === room.you ? '¡Te llevaste el duelo!' : `¡Esta vez ganó ${rival?.name}!` : 'Nos vemos en otro rancho.'}</h2>
+                    <p>{room.reason === 'guessed' ? 'Buena cabeza, buen pique. ¿Le damos otra vuelta?' : 'Las victorias por abandono no entran en los resultados públicos.'}</p>
+                    {room.revealedSecrets && <div className="duel-secrets">{room.players.map(player => <div key={player.id}><span>Código de {player.name}</span><strong>{room.revealedSecrets?.[player.id] || '—'}</strong></div>)}</div>}
+                    <div className="victory-stats"><div><strong>{me.guesses.length}</strong><span>tus intentos</span></div><div><strong>{formatTime(elapsed)}</strong><span>duración de la ronda</span></div></div>
+                    {room.phase === 'finished' && !room.players.some(player => player.left) ? <>
+                        <button className="ranch-button primary" disabled={busy || offline || room.rematch.includes(room.you)} onClick={() => void onAction('rematch')}>{room.rematch.includes(room.you) ? 'Revancha pedida. Esperando al rival…' : room.rematch.length ? '¡Aceptar revancha!' : '¡Quiero revancha!'} <Icon name="arrow" /></button>
+                        <p className="fine-print">Ambos deben aceptar. En la siguiente ronda empieza el otro jugador.</p>
+                    </> : <p className="fine-print">Tu rival salió o la sala se cerró. Vuelve al rancho para crear un nuevo duelo.</p>}
+                    {room.reason === 'guessed' && <p className="verified-result"><Icon name="trophy" size={17} /> Resultado verificado y guardado por el servidor.</p>}
+                </section>
+            )}
+            {rivalAway && !finished && <div className="duel-notice" role="status"><span>Tu rival está sin señal. Puede volver con el mismo enlace y navegador. Si no regresa en 90 segundos, podrás cerrar el duelo.</span>{canClaim && <button className="text-button" disabled={busy || offline} onClick={() => void onAction('claim_abandon')}>Cerrar por ausencia</button>}</div>}
+            <p className="duel-expiry fine-print">La sala caduca tras 30 minutos sin actividad y dura como máximo 24 horas. Los secretos solo se muestran al terminar.</p>
+        </>
     );
 }

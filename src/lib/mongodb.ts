@@ -1,34 +1,21 @@
 import { MongoClient } from 'mongodb';
 
-const uri = process.env.MONGODB_URI;
-const options = {};
+const cache = globalThis as typeof globalThis & {
+    _mongoClientPromise?: Promise<MongoClient>;
+};
 
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
+/** Connect lazily; runtime environment variables also work outside Astro/Vite. */
+export default async function getMongoClient(): Promise<MongoClient> {
+    const uri = process.env.MONGODB_URI || import.meta.env?.MONGODB_URI;
+    if (!uri) throw new Error('MongoDB no configurado');
 
-if (!uri) {
-    // If no URI, we create a promise that will throw when awaited
-    clientPromise = Promise.reject(new Error('Please add your MONGODB_URI to environment variables'));
-} else {
-    if (process.env.NODE_ENV === 'development') {
-        // In development mode, use a global variable so that the value
-        // is preserved across module reloads caused by HMR (Hot Module Replacement).
-        let globalWithMongo = global as typeof globalThis & {
-            _mongoClientPromise?: Promise<MongoClient>;
-        };
-
-        if (!globalWithMongo._mongoClientPromise) {
-            client = new MongoClient(uri, options);
-            globalWithMongo._mongoClientPromise = client.connect();
-        }
-        clientPromise = globalWithMongo._mongoClientPromise;
-    } else {
-        // In production mode, it's best to not use a global variable.
-        client = new MongoClient(uri, options);
-        clientPromise = client.connect();
+    if (!cache._mongoClientPromise) {
+        const client = new MongoClient(uri, { serverSelectionTimeoutMS: 5000 });
+        cache._mongoClientPromise = client.connect().catch(error => {
+            cache._mongoClientPromise = undefined;
+            void client.close().catch(() => {});
+            throw error;
+        });
     }
+    return cache._mongoClientPromise;
 }
-
-// Export a module-scoped MongoClient promise. By doing this in a
-// separate module, the client can be shared across functions.
-export default clientPromise;

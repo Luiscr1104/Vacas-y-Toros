@@ -26,3 +26,7 @@ pnpm-debug.log*
 
 # antigravity
 .agent/
+
+# Browser test artifacts
+playwright-report/
+test-results/

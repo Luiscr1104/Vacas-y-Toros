@@ -1,94 +1,79 @@
-import React, { useState } from 'react';
-import Peer from 'peerjs';
+import { useEffect, useState } from 'react';
 import { audio } from '../lib/audio';
 import MainMenu from './MainMenu';
 import Game from './Game';
-import VSLobby from './VSLobby';
-import VSGame from './VSGame';
+import Versus from './Versus';
+import Tutorial from './Tutorial';
+import Mascot from './Mascot';
+import Icon from './Icon';
+import Leaderboard from './Leaderboard';
 
-type GameMode = 'solo' | 'vs' | null;
-type VSState = 'lobby' | 'game';
+type Screen = 'home' | 'solo' | 'vs' | 'tutorial' | 'ranking';
 
 export default function App() {
-    const [gameMode, setGameMode] = useState<GameMode>(null);
-    const [vsState, setVSState] = useState<VSState>('lobby');
-    const [peer, setPeer] = useState<Peer | null>(null);
-    const [connection, setConnection] = useState<any | null>(null);
-    const [isHost, setIsHost] = useState<boolean>(false);
-    const [isMuted, setIsMuted] = useState<boolean>(false);
+    const [screen, setScreen] = useState<Screen>('home');
+    const [isMuted, setIsMuted] = useState(false);
 
-    const toggleMute = () => {
-        const newMuted = !isMuted;
-        setIsMuted(newMuted);
-        audio.setMuted(newMuted);
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).has('room')) setScreen('vs');
+        try {
+            const muted = localStorage.getItem('vyt-muted') === 'true';
+            setIsMuted(muted);
+            audio.setMuted(muted);
+        } catch { /* Sound can still be changed without browser storage. */ }
+    }, []);
+
+    const navigate = (next: Screen) => {
+        audio.play('click');
+        setScreen(next);
+        window.scrollTo({ top: 0, behavior: 'instant' });
     };
 
     const exitToMainMenu = () => {
-        // Reset state
-        setGameMode(null);
-        setVSState('lobby');
-        setPeer(null);
-        if (connection) {
-            connection.close();
-            setConnection(null);
-        }
-        // Clear URL parameters without reloading
         const url = new URL(window.location.href);
         url.searchParams.delete('room');
-        window.history.pushState({}, '', url.pathname);
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+        navigate('home');
     };
 
-    // Auto-join room if ID is in URL
-    React.useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('room')) {
-            setGameMode('vs');
-        }
-    }, []);
+    const startSolo = () => {
+        let hasLearned = false;
+        try { hasLearned = localStorage.getItem('vyt-learned') === 'true'; } catch { /* Optional persistence. */ }
+        navigate(hasLearned ? 'solo' : 'tutorial');
+    };
 
     return (
-        <div className="relative min-h-screen py-10 sm:py-20 px-4">
-            {/* Global Audio Control */}
-            <button
-                onClick={toggleMute}
-                className="fixed top-6 right-6 z-[100] w-12 h-12 flex items-center justify-center premium-glass rounded-2xl text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95 shadow-2xl group border border-white/20"
-                title={isMuted ? "Activar sonido" : "Silenciar"}
-            >
-                {isMuted ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
-                ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></svg>
-                )}
-                {/* Tooltip hint */}
-                <span className="absolute right-16 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black/80 backdrop-blur-md rounded-lg text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-white/10 whitespace-nowrap">
-                    {isMuted ? 'Muted' : 'Sound ON'}
-                </span>
-            </button>
+        <div className="ranch-app">
+            <header className="site-header">
+                <button className="brand" onClick={exitToMainMenu} disabled={screen === 'vs'} aria-label={screen === 'vs' ? 'Vacas y Toros' : 'Vacas y Toros, ir al inicio'}>
+                    <span className="brand-mascot"><Mascot animal="cow" /></span>
+                    <span>vacas<span className="brand-amp"> & </span>toros<span className="brand-dot">.</span><small>UN DUELO DE INGENIO</small></span>
+                </button>
+                <nav className="header-actions" aria-label="Navegación principal">
+                    {screen !== 'vs' && <><button className="text-button ranking-nav" onClick={() => navigate('ranking')} aria-label="Ver salón de la fama"><Icon name="trophy" size={17} /><span>Ranking</span></button>
+                    <button className="text-button header-help" onClick={() => navigate('tutorial')}>Cómo jugar <Icon name="help" size={17} /></button></>}
+                    <span className="nav-divider" />
+                    <button className="sound-button" aria-label={isMuted ? 'Activar sonido' : 'Silenciar sonido'} aria-pressed={isMuted} onClick={() => {
+                        const muted = !isMuted;
+                        setIsMuted(muted);
+                        audio.setMuted(muted);
+                        try { localStorage.setItem('vyt-muted', String(muted)); } catch { /* Optional persistence. */ }
+                        if (!muted) audio.play('click');
+                    }}><Icon name={isMuted ? 'mute' : 'sound'} size={19} /><span>Sonido {isMuted ? 'no' : 'sí'}</span></button>
+                </nav>
+            </header>
 
-            {gameMode === 'solo' && <Game onBack={exitToMainMenu} />}
+            {screen === 'home' && <MainMenu onStartGame={mode => mode === 'solo' ? startSolo() : navigate('vs')} onTutorial={() => navigate('tutorial')} />}
+            {screen === 'tutorial' && <main className="tutorial-page"><button className="text-button" onClick={exitToMainMenu}><Icon name="back" size={18} /> Volver al rancho</button><Tutorial onDone={() => {
+                try { localStorage.setItem('vyt-learned', 'true'); } catch { /* Optional persistence. */ }
+                audio.play('start');
+                navigate('solo');
+            }} /></main>}
+            {screen === 'solo' && <Game onBack={exitToMainMenu} />}
+            {screen === 'ranking' && <Leaderboard onBack={exitToMainMenu} />}
+            {screen === 'vs' && <Versus onExit={exitToMainMenu} />}
 
-            {gameMode === 'vs' && vsState === 'lobby' && (
-                <VSLobby
-                    onGameStart={(p, conn, host) => {
-                        setPeer(p);
-                        setConnection(conn);
-                        setIsHost(host);
-                        setVSState('game');
-                    }}
-                    onBack={exitToMainMenu}
-                />
-            )}
-
-            {gameMode === 'vs' && vsState === 'game' && peer && connection && (
-                <VSGame
-                    peer={peer}
-                    connection={connection}
-                    isHost={isHost}
-                    onExit={exitToMainMenu}
-                />
-            )}
-
-            {!gameMode && <MainMenu onStartGame={(mode) => setGameMode(mode)} />}
+            <footer className="site-footer"><span>Hecho para pensar. Diseñado para picarse.</span><span>Un clásico de siempre, con un poco más de <b>muuu.</b><span className="footer-flower" aria-hidden="true">✳</span></span></footer>
         </div>
     );
 }
